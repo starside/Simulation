@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 2.8)
+ 
+PROJECT(Point)
+ 
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+ 
+add_executable(Point MACOSX_BUNDLE main data branchedChain tests)
+add_definitions(-std=c++11)
+add_definitions(-Wall)
+add_definitions(-g)
+add_definitions(-pg)
+ 
+if(VTK_LIBRARIES)
+  target_link_libraries(Point ${VTK_LIBRARIES} openblas pthread)
+else()
+  target_link_libraries(Point vtkHybrid vtkWidgets openblas pthread)
+endif()

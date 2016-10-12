@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 2.8)
+ 
+PROJECT(Point)
+ 
+#find_package(VTK)
+#include(${VTK_USE_FILE})
+ 
+add_executable(Point MACOSX_BUNDLE main data branchedChain tests onlineVariance)
+add_definitions(-std=c++11)
+#add_definitions( -ftree-vectorizer-verbose=2)
+add_definitions(-Wall)
+add_definitions(-O3)
+add_definitions(-fopenmp)
+#add_definitions(-march=native)
+add_definitions(-g)
+add_definitions(-fdiagnostics-color=always)
+#add_definitions(-w)
+#add_definitions(-static)
+#add_definitions(-static-libstdc++)
+ 
+#if(VTK_LIBRARIES)
+#  target_link_libraries(Point ${VTK_LIBRARIES} openblas pthread)
+#else()
+#  target_link_libraries(Point vtkHybrid vtkWidgets openblas pthread)
+#endif()
+target_link_libraries(Point openblas pthread)
