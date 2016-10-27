@@ -189,7 +189,7 @@ void EnergyRelaxation(branchedChain *mol1, double dnu, const double maxeps, stat
 		mol1->epsilon = maxeps*1.0; //turn on interactions
 		//Run the simulation and take periodic snapshots
 		for(int i = 0; i < EQUILIBRATION; i++ ){
-			mol1->runMC(10, generator);
+			mol1->runMC(100, generator);
 			data[i] += mol1->energy;
     	}
     	num_points += 1.0;
@@ -243,8 +243,23 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 #endif
 
 	int edgeCount = mol1->numMonomers - mol1->numPhantoms - 1;
+	int segCount = mol1->numMonomers / 2;
+	int segR = mol1->numMonomers % 2;
+	if(segR != 1 && mol1->numPhantoms > 0){
+		std::cerr << "The number of monomers is not consistent!" << std::endl;
+		exit(0);
+	}
 	OnlineVar *ete_dists = new OnlineVar[edgeCount];
 	OnlineVar *avg_dist = new OnlineVar[edgeCount];
+	OnlineVar *seg_length = new OnlineVar[segCount];  //this looks at phantom segment length
+	int *label_trans = new int[segCount]; //translation table from segment index to edge
+
+	//track the density of every non-phantom particle
+	double **allDensity;
+	allDensity = new double* [ mol1->numMonomers - mol1->numPhantoms];
+	for(int i = 0; i < mol1->numMonomers - mol1->numPhantoms; i++) {
+		allDensity[i] = new double[DENSITY_BINS];
+	}
 
 	mol1->runMC(EQUILIBRATION,generator); //equilibrate the run
 
@@ -300,7 +315,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			ll.rog2_sum += _trg2; org2.addValue(_trg2);
 			double _tde = mol1->energyDerivative(DE);
 			ll.de_sum += _tde; odesum.addValue(_tde);
-			mol1->edgeLength(ete_dists, avg_dist); //find edge length and position
+			mol1->edgeLength(ete_dists, avg_dist, seg_length, label_trans); //find edge length and position
 
 			jVector l1,l2; double tbe; //find average angle.  This looks like temporary code
 			vectorSubP(&l1, &mol1->monomers[0].r, &mol1->monomers[2].r);
@@ -316,7 +331,15 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 #endif
 
 			ll.rmax = DENSITY_MAX_DOMAIN;
-			mol1->findDensity(ll.density_sum, DENSITY_BINS,DENSITY_MAX_DOMAIN);
+			mol1->findDensity(ll.density_sum, DENSITY_BINS,DENSITY_MAX_DOMAIN);  //overall density
+
+			//individual density
+			jVector rcm;
+			mol1->findCm(&rcm);
+			for(int i = 0; i < mol1->numMonomers - mol1->numPhantoms; i++) {
+				mol1->findDensitySingle(i, &rcm, allDensity[i], DENSITY_BINS, DENSITY_MAX_DOMAIN);
+			}
+
 			
 #ifdef FREE_ENERGY_DENSITY
 			double _tde2 = mol1->binParticles(DE);
@@ -358,11 +381,16 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			exit(0);
 		}
 
+		fwrite((void *)&mol1->numMonomers, sizeof(mol1->numMonomers), (size_t)1, pd); //write number of non-phantom edges
+		fwrite((void *)&mol1->numPhantoms, sizeof(mol1->numPhantoms), (size_t)1, pd); //write number of phantom edges
 		fwrite((void *)&ll.N,  sizeof(ll.N), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.rog2_sum,  sizeof(ll.rog2_sum), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.de_sum,  sizeof(ll.de_sum), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.rmax,  sizeof(ll.rmax), (size_t)1, pd); //write Log Line
 		fwrite((void *)ll.density_sum,  sizeof(ll.density_sum[0]), (size_t)DENSITY_BINS, pd); //write Log Line
+		for(int i = 0; i < mol1->numMonomers - mol1->numPhantoms; i++) { //write all densities
+			fwrite((void *)allDensity[i],  sizeof(allDensity[0][0]), (size_t)DENSITY_BINS, pd); //write Log Line
+		}
 		fwrite((void *)&ll.spacing,  sizeof(ll.spacing), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.sigma,  sizeof(ll.sigma), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.epsilon,  sizeof(ll.epsilon), (size_t)1, pd); //write Log Line
@@ -373,16 +401,28 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		fwrite((void *)&ll.de_mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
 		fwrite((void *)&ll.de_m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
 		fwrite((void *)&edgeCount, sizeof(edgeCount), (size_t)1, pd); //write number of non-phantom edges
+		fwrite((void *)&segCount, sizeof(segCount), (size_t)1, pd); //write number of non-phantom edges
+		int nrd = 0;
 		for(int i = 0; i < edgeCount; i++) { //write edge lengths
-			fwrite((void *)&ete_dists[i].n,  sizeof(ll.de_n), (size_t)1, pd); //write Log Line
-			fwrite((void *)&ete_dists[i].mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
-			fwrite((void *)&ete_dists[i].m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
+			nrd +=  sizeof(ll.de_n)*fwrite((void *)&ete_dists[i].n,  sizeof(ll.de_n), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_mean)*fwrite((void *)&ete_dists[i].mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_m2)*fwrite((void *)&ete_dists[i].m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
 		}
 		for(int i = 0; i < edgeCount; i++) { //write edge distances
-			fwrite((void *)&avg_dist[i].n,  sizeof(ll.de_n), (size_t)1, pd); //write Log Line
-			fwrite((void *)&avg_dist[i].mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
-			fwrite((void *)&avg_dist[i].m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_n)*fwrite((void *)&avg_dist[i].n,  sizeof(ll.de_n), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_mean)*fwrite((void *)&avg_dist[i].mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_m2)*fwrite((void *)&avg_dist[i].m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
 		}
+		for(int i = 0; i < segCount; i++) { //phantom segment distances
+			nrd += sizeof(ll.de_n)*fwrite((void *)&seg_length[i].n,  sizeof(ll.de_n), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_mean)*fwrite((void *)&seg_length[i].mean,  sizeof(ll.de_mean), (size_t)1, pd); //write Log Line
+			nrd += sizeof(ll.de_m2)*fwrite((void *)&seg_length[i].m2,  sizeof(ll.de_m2), (size_t)1, pd); //write Log Line
+		}
+		for(int i = 0; i < segCount; i++) { //phantom segment distances
+			nrd += sizeof(label_trans[0])*fwrite((void *)&label_trans[i],  sizeof(label_trans[0]), (size_t)1, pd); //write Log Line
+		}
+
+		std::cerr << "NRD " << nrd << std::endl;
 
 		fflush(pd);
 		fclose(pd);
@@ -452,7 +492,7 @@ int main(){
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }
 #endif
 #ifdef DENDRIMER
-	int mygen = 1;
+	int mygen = 5;
 	std::cout << "Dendrimer Mass " << mol1.dendrimerMass(3,mygen) <<std::endl;
 	mol1.createDendrimerR(CHAINLENGTH-PHANTOMS, 3,mygen,&generator);
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }

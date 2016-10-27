@@ -64,7 +64,7 @@ class branchedChain {
 		void _addToDend(int *cm, const int mon, const int f, const int g, const double x, const double y, const double z, stateGen *generator);
 		void createDendrimerR(const int mass, const int f, const int g, stateGen *generator); //recursive
 		int arcLength(const int start, const int nofollow);
-		void edgeLength(OnlineVar *el, OnlineVar *avgDist);
+		void edgeLength(OnlineVar *el, OnlineVar *avgDist, OnlineVar *seg_lens, int *labeltrans);
 		void insertPhantoms(const int RegularMonomers);
 		int makePhantoms2(const int numRegularMon, const int start, const int nofollow, std::vector<int> *q);
 		void printConnections();
@@ -95,6 +95,7 @@ class branchedChain {
 		int runMC(const int steps, stateGen *generator);
 		double energyDerivative(const double de);
 		void findDensity(double *dens, const int bins, const double rmax); //finds density (spherical coordinates)
+		void findDensitySingle(int mon, jVector *rcm, double *dens, const int bins, const double rmax); //find density of individual monomer
 
 		void enableDerivativeDensity(const double dim, const double domain);
 		double binParticles(const double de); //place particles in bin

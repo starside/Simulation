@@ -26,7 +26,7 @@
 
 vtkSmartPointer<vtkPolyData> pointsOnSphere(const int nLongitude, const int nAzimuth);
 vtkSmartPointer<vtkPolyData> randomPointsOnSphere(const int numPoints);
-vtkSmartPointer<vtkPolyData> showMonomers(const branchedChain *mol);*/
+vtkSmartPointer<vtkPolyData> showMonomers(const branchedChain *mol);
 
 #endif
 

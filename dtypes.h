@@ -20,6 +20,7 @@ typedef struct log_line {
 	double de_mean;
 	double de_m2;
 	int edgeCount;
+	int segCount;
 
 	unsigned long int ulongcandle;
 } LogLine;

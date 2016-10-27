@@ -86,8 +86,9 @@ void branchedChain::printConnections(){
 }
 
 void branchedChain::linkTwo(const int src, const int dest) {
+	std::cout << "Linking: " << src << " to" << dest << std::endl;
 	if(src >= numMonomers || dest >= numMonomers ||
-		src < 0 || dest < 0) { std::cerr << "1) Cannont link two monomers "<< src <<","<<dest<<".  You got a bug!\n"; }
+		src < 0 || dest < 0) { std::cerr << "1) Cannot link two monomers "<< src <<","<<dest<<".  You got a bug!\n"; }
 	//Find first self-link
 	int freeLinkS = -1; int freeLinkD = -1;
 	for(int i = 0; i < MAXBRANCHES; i++) {
@@ -185,12 +186,13 @@ int branchedChain::arcLength(const int start, const int nofollow){
 //Computes statistics about average edge length.  edgeLabels is 2x as long as edges
 //This labels edged in what I call standard order.  Scan adjacency row-first.  See structure
 //of double loop
-void branchedChain::edgeLength(OnlineVar *el, OnlineVar *avgPos){
+void branchedChain::edgeLength(OnlineVar *el, OnlineVar *avgPos, OnlineVar *seg_lens, int *labeltrans){
 	int sd;
 	int en = 0;
+	int sl = 0;
 	jVector origin = {{0,0,0}};
 	jVector t_center;
-	if(numPhantoms > 0) {sd = 2;} else {sd = 1;}
+	if(numPhantoms > 0) {sd = REPEAT_PHANTOMS + 1;} else {sd = 1;}
 	for(int i = 0; i < numMonomers - numPhantoms; i++){
 		for(int j = i + 1; j < numMonomers - numPhantoms; j++){
 			if(distMatrix[i*numMonomers + j] == sd) {
@@ -198,6 +200,19 @@ void branchedChain::edgeLength(OnlineVar *el, OnlineVar *avgPos){
 				vectorAvgP(&t_center, &monomers[i].r, &monomers[j].r); //find the center of the edge
 				avgPos[en].addValue( sqrt(diffSquared(&t_center,&origin)) ); //find the distance from the origin 
 				en++;
+				int end = j;
+				int middle = -666;
+				int begin = -666;
+				if(sd > 2) { //Find average length of phantom segments
+					while( begin != i){
+						middle = parentMatrix[i*numMonomers + end];
+						begin = parentMatrix[i*numMonomers + middle];
+						seg_lens[sl].addValue( sqrt(diffSquared(&monomers[begin].r, &monomers[end].r)) ); //edge length
+						end = begin;
+						labeltrans[sl] = en - 1; //I subtract 1 because en was incremented earlier.
+						sl++;
+					}
+				}
 			}
 		}
 	}
@@ -212,17 +227,28 @@ void branchedChain::insertPhantoms(const int RegularMonomers){
 		exit(0);
 	}
 	for(int i = 0; i < RegularMonomers - 1; i++) {  //number of edges
-		int s = i*2;  int a = s + 1;
+		int s = i*2;  int a = s + 1;  //iterate over edges in q
+		jVector diff, newPos, scaled;
 		unlinkTwo(q[s],q[a]);  //unlink start and away
 		linkTwo(q[s], RegularMonomers + numPhantoms); //link in the phantom
+
+		vectorSubP(&diff, &monomers[q[a]].r, &monomers[q[s]].r );
+		scaleP(&scaled, &diff, 1.0/(REPEAT_PHANTOMS+1.0) );
+		vectorAddP(&monomers[RegularMonomers + numPhantoms].r, &scaled, &monomers[q[s]].r);
+
+		int firstPhant = RegularMonomers + numPhantoms;
+		for(int ii = 0; ii < REPEAT_PHANTOMS -1; ii++ ){ //link in middle phantsom
+			linkTwo(RegularMonomers + numPhantoms, RegularMonomers + numPhantoms + 1);
+			monomers[RegularMonomers + numPhantoms + 1].zeroBranch = RegularMonomers + numPhantoms ;  //set the correct zero branch
+			vectorAddP(&monomers[RegularMonomers + numPhantoms + 1].r, &scaled, &monomers[RegularMonomers + numPhantoms].r);
+			numPhantoms++;
+		}
+		
 		linkTwo(RegularMonomers + numPhantoms, q[a]); //link in the phantom
 
 		monomers[q[a]].zeroBranch = RegularMonomers + numPhantoms;  //set the correct zero branch
-		monomers[RegularMonomers+numPhantoms].zeroBranch = q[s];
-		jVector diff, newPos, scaled;
-		vectorSubP(&diff, &monomers[q[a]].r, &monomers[q[s]].r );
-		scaleP(&scaled, &diff, 0.5);
-		vectorAddP(&monomers[RegularMonomers + numPhantoms].r, &scaled, &monomers[q[s]].r);
+		monomers[firstPhant].zeroBranch = q[s];
+		
 
 		numPhantoms++;
 	}
@@ -294,7 +320,7 @@ void branchedChain::_addToDend(int *cm, const int mon, const int f, const int g,
 
 	if(g == 1){return;} //base condition
 
-	for(int i=0; i < FUNCTIONALITY -1; i++){
+	for(int i=0; i < f -1; i++){
 		double theta = acos(ca(*generator)); double phi = phim(*generator);
 		double nx = x+spacing*sin(theta)*cos(phi); double ny = y+spacing*sin(theta)*sin(phi); double nz = z+spacing*cos(theta);
 		linkTwo(mon,*cm);
@@ -307,7 +333,7 @@ void branchedChain::_addToDend(int *cm, const int mon, const int f, const int g,
 
 void branchedChain::createDendrimerR(const int mass, const int f, const int g, stateGen *generator){
 	if(mass!= dendrimerMass(f,g) ) {
-		std::cout << "Error: numMonomers" << mass <<" is not correct for a dendrimer." << std::endl;
+		std::cout << "Error: numMonomers" << mass <<" is not correct for a dendrimer:" << dendrimerMass(f,g) << std::endl;
 		exit(0);
 	}
 	//rng maps
@@ -328,7 +354,7 @@ void branchedChain::createDendrimerR(const int mass, const int f, const int g, s
 	int cm = 0;
 	monomers[0].zeroBranch = 0;
 	smPos(0,0,0,0); cm++;
-	for(int i = 0; i < FUNCTIONALITY; i++) {
+	for(int i = 0; i < f; i++) {
 		double theta = acos(ca(*generator)); double phi = phim(*generator);
 		double x = spacing*sin(theta)*cos(phi); double y = spacing*sin(theta)*sin(phi); double z = spacing*cos(theta);
 		smPos(cm,x,y,z);
@@ -337,7 +363,7 @@ void branchedChain::createDendrimerR(const int mass, const int f, const int g, s
 		cm++;
 	}
 	//Do other generations
-	for(int i = 0; i < FUNCTIONALITY; i++) {
+	for(int i = 0; i < f; i++) {
 		double x = monomers[i+1].r.vector[0];double y = monomers[i+1].r.vector[1];double z = monomers[i+1].r.vector[2];
 		_addToDend(&cm, i+1, f, g, x,y,z, generator);
 	}
@@ -764,7 +790,7 @@ double branchedChain::totalLJ() {
 	double d2 = 0.0;
 	int al = 1;
 	double tup, tup2;
-	if( numPhantoms > 0) {al = 2;}
+	if( numPhantoms > 0) {al = REPEAT_PHANTOMS + 1;}
 #ifdef FREE_ENERGY_DENSITY
 	//reset interaction energy
 	for(int i = 0; i < nm; i++) {
@@ -790,15 +816,25 @@ double branchedChain::totalLJ() {
 	jVector l1, l2;
 	int connectingMonomer;
 	double bendingEnergy = 0.0;
-	double ls = spacing*spacing/4.0;
+	double ls = spacing*spacing/( (REPEAT_PHANTOMS+1.0)*(REPEAT_PHANTOMS+1.0) );
 	if(numPhantoms > 0){
 		for(int i = 0; i < nm; i++) {
 			for(int j=i+1; j < nm; j++){
-				if(distMatrix[i*numMonomers + j] == 2) { //adjacnt pair
-					connectingMonomer = parentMatrix[i*numMonomers + j]; //the monomer between i and j
+				if(distMatrix[i*numMonomers + j] == REPEAT_PHANTOMS + 1) { //adjacnt pair
+					int termMon = j;
+					int startMon = i;
+					for(int iy = 0; iy < (REPEAT_PHANTOMS+1)/2; iy ++) { //find bending energy bet
+						connectingMonomer = parentMatrix[i*numMonomers + termMon]; //First connecting monomer
+						startMon = parentMatrix[i*numMonomers + connectingMonomer]; //start monomer of segment
+						vectorSubP(&l1, &monomers[connectingMonomer].r, &monomers[startMon].r);
+						vectorSubP(&l2, &monomers[termMon].r, &monomers[connectingMonomer].r);
+						bendingEnergy += std::abs(dotP(&l1, &l2)/ls);  //1.0 - 0.5*(1.0 + dotP(&l1, &l2)/ls);
+						termMon = startMon;
+					}
+					/*connectingMonomer = parentMatrix[i*numMonomers + j]; //the monomer between i and j
 					vectorSubP(&l1, &monomers[connectingMonomer].r, &monomers[i].r);
 					vectorSubP(&l2, &monomers[j].r, &monomers[connectingMonomer].r);
-					bendingEnergy += std::abs(dotP(&l1, &l2)/ls);  //1.0 - 0.5*(1.0 + dotP(&l1, &l2)/ls);
+					bendingEnergy += std::abs(dotP(&l1, &l2)/ls);  //1.0 - 0.5*(1.0 + dotP(&l1, &l2)/ls);*/
 				}
 			}
 		}
@@ -818,7 +854,7 @@ double branchedChain::setSelfEnergy(const double spacing, const double sig) {
 
 	int al = 1; //graph distance that counts as nearest neighbor
 	double tr, acc;
-	if(numPhantoms > 0){ al=2; }
+	if(numPhantoms > 0){ al= REPEAT_PHANTOMS + 1; }
 
 	for(int i = 0; i < nm; i++){
 		selfEnergyPerParticle[i] = 0;
@@ -830,7 +866,7 @@ double branchedChain::setSelfEnergy(const double spacing, const double sig) {
 		for(int j=i+1; j < nm; j++){
 			if(distMatrix[i*numMonomers + j] > al ){ //ignore nearest neighbor interactions
 				double d2 = distMatrix[i*numMonomers + j]*distMatrix[i*numMonomers + j];  //3 lines:  Find the max distance between 2 monomers
-				if(numPhantoms > 0) { d2 = d2*spacing*spacing/4.0; }// distances over over estimated with phantom monomers
+				if(numPhantoms > 0) { d2 = d2*spacing*spacing/( (REPEAT_PHANTOMS+1)*(REPEAT_PHANTOMS + 1) ); }// distances over over estimated with phantom monomers
 				else { d2 = d2*spacing*spacing; }
 				tr = unitPot(d2,sig);
 				epen += tr;//sincPot(sqrt(d2), sig, eps);
@@ -1009,6 +1045,7 @@ double branchedChain::externalEnergy(const double T) {
 void branchedChain::findDensity(double *dens, const int bins, const double rmax){
 	jVector rcm;
 	findCm(&rcm);
+	for(int i = 0; i < bins; i++) {	dens[i] = 0; }
 	for(int i = 0; i < numMonomers - numPhantoms; i++){
 		double d = sqrt(diffSquared(&monomers[i].r, &rcm) );
 		int pb = (int) floor(bins*d/rmax);
@@ -1018,6 +1055,17 @@ void branchedChain::findDensity(double *dens, const int bins, const double rmax)
 		}
 		dens[pb] += 1.0; //normalization such that integra lof density is 1
 	}
+}
+
+void branchedChain::findDensitySingle(int mon, jVector *rcm, double *dens, const int bins, const double rmax){
+	for(int i = 0; i < bins; i++) {	dens[i] = 0; }
+	double d = sqrt(diffSquared(&monomers[mon].r, rcm) );
+	int pb = (int) floor(bins*d/rmax);
+	if(pb > bins) {
+		std::cout << "Your rmax is too small!" <<std::endl;
+		exit(0);
+	}
+	dens[pb] += 1.0; //normalization such that integra lof density is 1
 }
 
 //check if two monomers are topologically neirest neighbohrs
