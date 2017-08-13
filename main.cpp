@@ -29,6 +29,7 @@
 #include "data.h"
 #include "branchedChain.h"
 #include "onlineVariance.h"
+#include "Kabsch.h"
 
 
 //use cmake . in base folder to generate Makefile
@@ -305,6 +306,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		}
 		//zero density
 		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
+		// Save a set of points as a reference frame.
+		Eigen::Matrix3Xd reference_state = mol1->getMonomerPositions();
 #ifdef NUMBINS
 		//init labels and zero histogram
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
@@ -339,7 +342,11 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 			ll.rmax = DENSITY_MAX_DOMAIN;
 			mol1->findDensity(ll.density_sum, DENSITY_BINS,DENSITY_MAX_DOMAIN);  //overall density
-			mol1->findDensity2D(de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+
+			//Rotate molecule to reference state with Kabsch
+			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
+			Eigen::Affine3d orient = Find3DAffineTransform(new_state, reference_state);	// Perform Kabsch, with scale = 1.0
+			mol1->findDensity2D(orient.linear()*new_state, de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
 
 			//individual density
 			jVector rcm;

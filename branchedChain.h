@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "onlineVariance.h"
+#include "Kabsch.h"
 
 #define RANDOMCLASS std::mt19937_64
 typedef FILE* dataFP;
@@ -89,6 +90,9 @@ class branchedChain {
 		double findRg(); //find radius of gyration]]
 		double findRg(const int dim);
 
+		//return monomer positions as eigen matrix
+		Eigen::Matrix3Xd getMonomerPositions();
+
 		void findCm(jVector *res); //finds the center of mass
 		void findStructureFactorRadial(double *result, size_t rlen, double qmax);
 		double externalEnergy(const double coeff);
@@ -97,7 +101,10 @@ class branchedChain {
 		double totalLJFast(); //linear polymer only
 		int runMC(const int steps, stateGen *generator);
 		double energyDerivative(const double de);
+
+		void findDensity2D(Eigen::Matrix3Xd pos, double *dens, const int bins, const double rmax);
 		void findDensity2D(double *dens, const int bins, const double rmax);
+
 		void findDensity(double *dens, const int bins, const double rmax); //finds density (spherical coordinates)
 		void findDensitySingle(int mon, jVector *rcm, double *dens, const int bins, const double rmax); //find density of individual monomer
 

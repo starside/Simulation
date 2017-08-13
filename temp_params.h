@@ -2,7 +2,7 @@
 #define ZIPNAME "Dendrimer_5g_eps2.0_15905136217547002955"
 #define BATCHES 5
 #define LINES 10000
-#define MOL_EPSILON 0//2.0
+#define MOL_EPSILON 2.0
 #define TOPOLOGY_FILE "topo.csv" 
 #define FUNCTIONALITY 3
 #define SPACE_DIMENSION 2

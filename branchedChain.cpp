@@ -1045,6 +1045,27 @@ double branchedChain::externalEnergy(const double T) {
 	return -T*r;
 }
 
+
+void branchedChain::findDensity2D(Eigen::Matrix3Xd pos, double *dens, const int bins, const double rmax){
+	jVector rcm, monomer;
+	Eigen::Matrix3Xd rcmv = pos.rowwise().sum()/(double)pos.cols(); //finds CM
+	for(int d = 0; d < 3; d++) { //Copy Eigen vector to my jVector
+		rcm.vector[d] = rcmv(d,0);
+	}
+	for(int i = 0; i < numMonomers - numPhantoms; i++){
+		jVector d = {{0,0,0}};
+		for(int d = 0; d < 3; d++){monomer.vector[d] = pos(d, i); } //copy to monomer
+		vectorSubV(&d,&monomer, &rcm); // Monomer offset from CM
+		int pbx = (int) floor(bins/2.0*(1.0 + d.vector[0]/rmax) );	// x bin
+		int pby = (int) floor(bins/2.0*(1.0 + d.vector[1]/rmax) );	// y bin
+		if(pbx >= bins || pby >= bins || pbx < 0 || pby < 0) {
+			std::cout << "Your rmax is too small!" <<std::endl;
+			exit(0);
+		}
+		dens[pbx + bins*pby] += 1.0; //normalization such that integra lof density is 1
+	}
+}
+
 void branchedChain::findDensity2D(double *dens, const int bins, const double rmax){
 	jVector rcm;
 	findCm(&rcm);
@@ -1210,6 +1231,17 @@ void branchedChain::printParams(std::ostream& os){
 	os << "Spacing: " << spacing << std::endl;
 	os << "Sigma: " << sigma << std::endl;
 	os << "Epsilon: " << epsilon << std::endl;
+}
+
+Eigen::Matrix3Xd branchedChain::getMonomerPositions(){
+	int nm = numMonomers - numPhantoms;
+	Eigen::Matrix3Xd in(3, nm);
+	for (int row = 0; row < in.rows(); row++) {
+		for (int col = 0; col < in.cols(); col++) {
+			in(row, col) = monomers[col].r.vector[row];
+		}
+	}
+	return in;
 }
 
 RANDOMCLASS::result_type stateGen::operator()() {
