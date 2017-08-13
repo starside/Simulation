@@ -72,7 +72,7 @@ void ThermodynamicIntegrate(branchedChain *mol1, const double dnu, const double 
 		//Run the simulation and take periodic snapshots
 		for(int i = 0; i < 1000; i++ ){
 			mol1->runMC(SNAPSHOT,generator);
-			double trg2 = mol1->findRg();
+			double trg2 = mol1->findRg(2);
 			rog2 += trg2; //find radius of gyration
 	        //calculate derivative
 	        mol1->epsilon = nu*emax+DS;
@@ -229,6 +229,11 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 	char bname[500];
 	char pdname[500]; char ssname[500];
 	char command[1000];
+	double *de2DArray = new double[DENSITY_BINS_2D*DENSITY_BINS_2D]; //allocate 2D hist
+	if(de2DArray == NULL) {
+		std::cerr << "Could not allocate memory!" << std::endl;
+		exit(0);
+	}
 
 	int b = 0;
 
@@ -298,6 +303,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			ete_dists[i].setState(0,0,0);
 			avg_dist[i].setState(0,0,0);
 		}
+		//zero density
+		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
 #ifdef NUMBINS
 		//init labels and zero histogram
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
@@ -332,6 +339,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 			ll.rmax = DENSITY_MAX_DOMAIN;
 			mol1->findDensity(ll.density_sum, DENSITY_BINS,DENSITY_MAX_DOMAIN);  //overall density
+			mol1->findDensity2D(de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
 
 			//individual density
 			jVector rcm;
@@ -352,6 +360,15 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 			ll.N++;
 		}
+		//output density
+		std::ofstream density2DFile;
+		density2DFile.open("density2d.csv", std::ios::out | std::ios::binary);
+		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){
+			de2DArray[i] = de2DArray[i]/(double)ll.N ;
+		}
+		density2DFile.write((char*)de2DArray, DENSITY_BINS_2D*DENSITY_BINS_2D*sizeof(double) );
+		density2DFile.close();
+
 		fclose(fp);
 		std::cerr << "Rg2 is " << ll.rog2_sum/(double)ll.N << " +- " << sqrt(org2.Variance()/(double)org2.n)  << " <cos> " << aveCos.mean << std::endl;
 		//std::cerr << "End to end distance is " << ete_dist.mean << std::endl;
@@ -437,6 +454,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 	}
 	delete[] ete_dists;
 	delete[] avg_dist;
+	delete[] de2DArray;
 }
 
 //global timer molecule
@@ -472,7 +490,7 @@ int main(){
     std::cerr << "Spacing " << MOL_SPACING << std::endl;
 
 	//Build chain
-	branchedChain mol1 = branchedChain(CHAINLENGTH);
+	branchedChain mol1 = branchedChain(CHAINLENGTH, SPACE_DIMENSION);
 	//set parameters
 	mol1.sigma = MOL_SIGMA;
 	mol1.epsilon = MOL_EPSILON;
@@ -492,7 +510,7 @@ int main(){
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }
 #endif
 #ifdef DENDRIMER
-	int mygen = 5;
+	int mygen = 2;
 	std::cout << "Dendrimer Mass " << mol1.dendrimerMass(3,mygen) <<std::endl;
 	mol1.createDendrimerR(CHAINLENGTH-PHANTOMS, 3,mygen,&generator);
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }

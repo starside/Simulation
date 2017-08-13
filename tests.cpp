@@ -15,7 +15,7 @@
 void testCenterOfMass(){
 	int numPoints = 14;
 	int x = 2;
-	branchedChain mol1(numPoints);
+	branchedChain mol1(numPoints, 3);
 	for(int k = 0; k < numPoints; k++) {
 		mol1.monomers[k].r.vector[0] = pow(x, (double) k);
 		mol1.monomers[k].r.vector[1] = 0;
@@ -47,7 +47,7 @@ void testRng(){
 
 void testStructureFactor() {
 	stateGen gen;
-	branchedChain mol1(CHAINLENGTH);
+	branchedChain mol1(CHAINLENGTH, 3);
 	mol1.createDendrimerR(CHAINLENGTH,3,5,&gen);
 	mol1.sigma = MOL_SIGMA;
 	mol1.epsilon = MOL_EPSILON;
@@ -80,7 +80,7 @@ void testSaveState() {
 	int batch = 666;
 	dataFP fp;
 	stateGen gen; gen.seed(ms);
-	branchedChain mol1(chainlen), mol2(chainlen);
+	branchedChain mol1(chainlen, 3), mol2(chainlen,3);
 	mol1.setLinearPositions(2.0);
 	fp = fopen("foo.dat","wb");
 	mol1.writeHeader(fp,&gen);
@@ -102,7 +102,7 @@ void testSaveState() {
 	std::cout << std::endl;
 	//Test save and load state
 	gen.seed(ms);
-	branchedChain mol3(chainlen);
+	branchedChain mol3(chainlen,3);
 	mol3.createLinear(chainlen);
 	mol3.setLinearPositions(1.0);
 	mol3.runMC(1000,&gen);

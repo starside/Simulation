@@ -56,6 +56,22 @@ double branchedChain::findRg() {
 	return rg/((double)(nm*nm));
 }
 
+double branchedChain::findRg(const int dim) {
+	//return false;  //disable SARW
+    double rg = 0.0; 
+    jVector res = {{0,0,0}};
+	int nm = this->numMonomers - this->numPhantoms;
+	jMonomer *monomers = this->monomers;
+	for(int i = 0; i < nm; i++) {
+		for(int j=i+1; j < nm; j++){
+			vectorSubV(&res,&monomers[i].r, &monomers[j].r);
+			double d2 = res.vector[dim]*res.vector[dim];
+			rg += d2;
+		}
+	}
+	return rg/((double)(nm*nm));
+}
+
 //finds center of mass
 void branchedChain::findCm(jVector *res) {
 	//return false;  //disable SARW
@@ -272,39 +288,6 @@ int branchedChain::makePhantoms2(const int numRegularMon, const int start, const
 	return countedMonomers + 1;
 }
 
-/*int branchedChain::makePhantoms2(const int numRegularMon,const int start, const int nofollow, const int nofollow2){
-	int countedMonomers = 0;
-	std::cerr << "start,nf,nf2: " << start << ", " << nofollow << ", " << nofollow2 << std::endl;
-	if(start >= numRegularMon || start < 0 || nofollow >= numRegularMon || nofollow < 0){
-		std::cerr << "start >= numRegularMon " << (int)(start >= numRegularMon)  << std::endl;
-		std::cerr << "start < 0 " << (int)(start < 0 ) << std::endl;
-		std::cerr << "nofollow >= numRegularMon " << (int)(nofollow >= numRegularMon) << std::endl;
-		std::cerr << "nofollow < 0 " << (int)(nofollow < 0) << std::endl;
-		std::cerr << "Make Phantoms: Indexing non-existant monomner" << start <<"," << nofollow << "\n"; exit(0);
-	}
-	//count away branches
-	for(int i = 0; i < MAXBRANCHES; i++) {
-		int away = monomers[start].branch[i];
-		if(away != start && away != nofollow && away != nofollow2) { //away, as does not point to self
-			std::cout << diffSquared( &monomers[start].r, &monomers[away].r) << ",";
-			unlinkTwo(start,away);  //unlink start and away
-			linkTwo(start, numRegularMon + numPhantoms); //link in the phantom
-			linkTwo(numRegularMon + numPhantoms, away);
-			monomers[away].zeroBranch = numRegularMon + numPhantoms;  //set the correct zero branch
-			monomers[numRegularMon+numPhantoms].zeroBranch = start;
-			jVector diff, newPos, scaled;
-			vectorSubP(&diff, &monomers[away].r, &monomers[start].r );
-			scaleP(&scaled, &diff, 0.5);
-			vectorAddP(&monomers[numRegularMon + numPhantoms].r, &scaled, &monomers[start].r);
-
-			numPhantoms++;
-			countedMonomers += this->makePhantoms2(numRegularMon, away,start, numRegularMon + numPhantoms - 1);
-		}
-	}
-	return countedMonomers + 1;
-}*/
-
-
 //compact way to set monomer position
 void branchedChain::smPos(const int i, const double x, const double y, const double z) {
 	monomers[i].r.vector[0] = x;
@@ -322,7 +305,17 @@ void branchedChain::_addToDend(int *cm, const int mon, const int f, const int g,
 
 	for(int i=0; i < f -1; i++){
 		double theta = acos(ca(*generator)); double phi = phim(*generator);
-		double nx = x+spacing*sin(theta)*cos(phi); double ny = y+spacing*sin(theta)*sin(phi); double nz = z+spacing*cos(theta);
+		double dx,dy,dz;
+		if(space_dim == 2) { //restrict to x-y plane
+			dx = spacing*cos(phi);
+			dy = spacing*sin(phi);
+			dz = 0;
+		} else {
+			dx = spacing*sin(theta)*cos(phi);
+			dy = spacing*sin(theta)*sin(phi);
+			dz = spacing*cos(theta);
+		}
+		double nx = x+dx; double ny = y+dy; double nz = z+dz;
 		linkTwo(mon,*cm);
 		monomers[*cm].zeroBranch = mon;
 		smPos(*cm,nx,ny,nz); *cm = *cm + 1;
@@ -356,7 +349,12 @@ void branchedChain::createDendrimerR(const int mass, const int f, const int g, s
 	smPos(0,0,0,0); cm++;
 	for(int i = 0; i < f; i++) {
 		double theta = acos(ca(*generator)); double phi = phim(*generator);
-		double x = spacing*sin(theta)*cos(phi); double y = spacing*sin(theta)*sin(phi); double z = spacing*cos(theta);
+		double x,y,z;
+		if(space_dim == 3) {
+			x = spacing*sin(theta)*cos(phi); y = spacing*sin(theta)*sin(phi); z = spacing*cos(theta);
+		} else {	//Restrict to x-y plane
+			x = spacing*cos(phi); y = spacing*sin(phi); z = 0;
+		}
 		smPos(cm,x,y,z);
 		monomers[cm].zeroBranch = 0;
 		linkTwo(0,cm); //link core to first generation
@@ -460,7 +458,7 @@ branchedChain::~branchedChain() {
 	if(de3DArray != NULL) {delete[] de3DArray;}
 }
 
-branchedChain::branchedChain(const int num){
+branchedChain::branchedChain(const int num, const int dim){
 	if(num < 2) { std::cerr << "Must have more than one monomer per branchedChain" << std::endl;
 			exit(EXIT_FAILURE); }
 	try {
@@ -477,6 +475,7 @@ branchedChain::branchedChain(const int num){
 		exit(EXIT_FAILURE);
 	}
 	//Now that that is done, on with the good stuff
+	space_dim = dim;
 	numMonomers = num;
 	numPhantoms = 0;
 	energy = 0.0;
@@ -735,7 +734,11 @@ int branchedChain::runMC(const int steps, stateGen *generator) {
 			int randMonomer = intDistribution(*generator);
 			//int bigSection = mol1.largestSection(randMonomer);
 			this->save();
-			this->rotateCMBranch(randMonomer,rz1,rx1,rz2);
+			if(space_dim == 2){
+				this->rotateCMBranch(randMonomer,rz1,0,0);
+			} else {
+				this->rotateCMBranch(randMonomer,rz1,rx1,rz2);
+			}
 
 			//externalEnergy is debug
 	        newenergy = this->totalLJ() + EXTERNAL_ENERGY_COEFF*this->externalEnergy(MY_TENSION); //calculate initial energy of configuration
@@ -1042,6 +1045,22 @@ double branchedChain::externalEnergy(const double T) {
 	return -T*r;
 }
 
+void branchedChain::findDensity2D(double *dens, const int bins, const double rmax){
+	jVector rcm;
+	findCm(&rcm);
+	for(int i = 0; i < numMonomers - numPhantoms; i++){
+		jVector d = {{0,0,0}};
+		vectorSubV(&d,&monomers[i].r, &rcm); // Monomer offset from CM
+		int pbx = (int) floor(bins/2.0*(1.0 + d.vector[0]/rmax) );	// x bin
+		int pby = (int) floor(bins/2.0*(1.0 + d.vector[1]/rmax) );	// y bin
+		if(pbx >= bins || pby >= bins || pbx < 0 || pby < 0) {
+			std::cout << "Your rmax is too small!" <<std::endl;
+			exit(0);
+		}
+		dens[pbx + bins*pby] += 1.0; //normalization such that integra lof density is 1
+	}
+}
+
 void branchedChain::findDensity(double *dens, const int bins, const double rmax){
 	jVector rcm;
 	findCm(&rcm);
@@ -1052,7 +1071,7 @@ void branchedChain::findDensity(double *dens, const int bins, const double rmax)
 		if(pb > bins) {
 			std::cout << "Your rmax is too small!" <<std::endl;
 			exit(0);
-		}
+		} 
 		dens[pb] += 1.0; //normalization such that integra lof density is 1
 	}
 }

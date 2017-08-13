@@ -33,6 +33,7 @@ class branchedChain {
 		int *distMatrix; 				//distances
 		int    numMonomers; 			//duh
 		int    numPhantoms; // the number of phantom monomers
+		int space_dim; //spatial dimensions.  Options are 2 and 3
 		double energy; //the energy of the system
 		double selfEnergy; //self energy of nearest neighbor interactions (to be subtracted off)
 		double oldSpacing, oldSig;
@@ -55,7 +56,7 @@ class branchedChain {
 		int divStackLargest;			//beginning of the smaller chunk (a stack index). "Division point"
 		int *divStack;					//stack to store halves of pivot molecules
 		//branchedChain(const int num, jMonomer *data, int *stackspace);
-		branchedChain(const int num);	//number of monomers in molecule
+		branchedChain(const int num, const int dim);	//number of monomers in molecule
 		~branchedChain(); //destructor
 		void saveTopofile(char *fname);
 		void loadAdjacency(int mass, const char *fname, stateGen * generator);
@@ -85,7 +86,9 @@ class branchedChain {
 		void disableStack(); //countMonomers no longer pushes on stack
 		void smPos(const int i, const double x, const double y, const double z); //set monomer position
 
-		double findRg(); //find radius of gyration
+		double findRg(); //find radius of gyration]]
+		double findRg(const int dim);
+
 		void findCm(jVector *res); //finds the center of mass
 		void findStructureFactorRadial(double *result, size_t rlen, double qmax);
 		double externalEnergy(const double coeff);
@@ -94,6 +97,7 @@ class branchedChain {
 		double totalLJFast(); //linear polymer only
 		int runMC(const int steps, stateGen *generator);
 		double energyDerivative(const double de);
+		void findDensity2D(double *dens, const int bins, const double rmax);
 		void findDensity(double *dens, const int bins, const double rmax); //finds density (spherical coordinates)
 		void findDensitySingle(int mon, jVector *rcm, double *dens, const int bins, const double rmax); //find density of individual monomer
 
