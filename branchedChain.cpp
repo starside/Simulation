@@ -954,18 +954,29 @@ typedef struct myQ {
 	int hops;
 } Skip;
 
+/*Simple quadratic
 inline double unitPot(const double d2, const double sig){
 	double x = d2/(sig*sig);
-	/*if(x < 1.0) {
-		return 1.0;
-	}
-	return 0.0;*/
 	if(x < 1.0) {
 		return 1.0 - x;
 	} else {
 		return 0.0;
 	}
 
+}*/
+
+//fast exponential approximation
+inline
+double exp1(double x) {
+  x = 1.0 + x / 256.0;
+  x *= x; x *= x; x *= x; x *= x;
+  x *= x; x *= x; x *= x; x *= x;
+  return x;
+}
+
+inline double unitPot(const double d2, const double sig){
+	double x = d2/(sig*sig);
+	return (1.0/(M_PI*sig*sig))*exp1(-x);
 }
 
 //enable the finding of derivative density.  Dim is the number of divisions per dimension
