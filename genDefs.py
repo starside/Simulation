@@ -9,13 +9,13 @@ parser.add_argument("--surpress", action='store_true', help="Only generate temp_
 args = parser.parse_args()
 
 zip_prefix="Dendrimer_5g"
-batches = 5#25
-batch_lines = 100#0
+batches = 1 #5#25
+batch_lines = 10000
 eps_mult = 1#  The number of duplicate epsilon values.  Useful to split batches into smaller batches
 
 start_eps = 0.0
-mid_eps = 0.2  #Seperation between high density region and low density region
-end_eps = 2.0
+mid_eps = 3.0  #Seperation between high density region and low density region
+end_eps = 20.0
 
 numHD = 20
 numLD = 20
@@ -53,11 +53,13 @@ for i,e in enumerate(eps_ax):
 	fp.write("#define BATCHES "+str(batches)+"\n")
 	fp.write("#define LINES "+str(batch_lines)+"\n")
 	fp.write("#define MOL_EPSILON "+str(e)+"\n")
-	fp.write("#define TOPOLOGY_FILE topo.csv \n")
+	fp.write("#define TOPOLOGY_FILE \"topo.csv\" \n")
+	fp.write("#define SPACE_DIMENSION 2 \n")
 	if hasattr(args,"func"):
 		fp.write("#define FUNCTIONALITY "+str(args.func)+"\n" )
 	fp.close()
-	if not hasattr(args,"surpress"):
+	if hasattr(args,"surpress"):
+		print "Compiling"
 		os.system("./compile.sh")
 		os.system("cp build/Point build/Point_"+str(i))
 

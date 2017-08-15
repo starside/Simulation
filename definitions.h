@@ -31,7 +31,7 @@
 #define LOG_STATE 10
 
  //Molecule parameters
- #define MOL_SPACING 2.0/1.39388
+ #define MOL_SPACING 1.0/0.4 //2.0/1.39388
  #define MOL_SIGMA	 0.5//MOL_SPACING*0.95
  #define MOL_BETA	 4.0 //1.0  //Bending energy
 
@@ -60,7 +60,7 @@
 #define CHAINLENGTH 10 + PHANTOMS
 #define DECORR_TIME 2500//0//0//0//0 //number of moves to relax the energy
 #define EQUILIBRATION DECORR_TIME//*10*5
-#define SNAPSHOT DECORR_TIME
+#define SNAPSHOT DECORR_TIME/10
 //#define MONOMER_RADIUS 1.1//1.414213562
 //#define EPSILON 5.0 //2
 

@@ -212,7 +212,7 @@ void branchedChain::edgeLength(OnlineVar *el, OnlineVar *avgPos, OnlineVar *seg_
 	for(int i = 0; i < numMonomers - numPhantoms; i++){
 		for(int j = i + 1; j < numMonomers - numPhantoms; j++){
 			if(distMatrix[i*numMonomers + j] == sd) {
-				el[en].addValue( sqrt(diffSquared(&monomers[i].r, &monomers[j].r)) ); //edge length
+				el[en].addValue( diffSquared(&monomers[i].r, &monomers[j].r) ); //edge length
 				vectorAvgP(&t_center, &monomers[i].r, &monomers[j].r); //find the center of the edge
 				avgPos[en].addValue( sqrt(diffSquared(&t_center,&origin)) ); //find the distance from the origin 
 				en++;
@@ -803,7 +803,9 @@ double branchedChain::totalLJ() {
 
 	for(int i = 0; i < nm; i++) {
 		for(int j=i+1; j < nm; j++){
+#ifdef IGNORE_NN
 			if(distMatrix[i*numMonomers + j] > al) { //ignore nearest neighbors
+#endif
 				d2 = diffSquared(&monomers[i].r, &monomers[j].r);
 				tup = unitPot(d2,sigma);
 				epen += tup;  //These 3 lines are for energy density.  They cost a little, 10% speed
@@ -811,7 +813,9 @@ double branchedChain::totalLJ() {
 				monomers[i].lastInteraction += tup;  //make sure to divide by 2 in post processing.  We double count
 				monomers[j].lastInteraction += tup;
 #endif
+#ifdef IGNORE_NN
 			}
+#endif
 		}
 	}
 
@@ -863,7 +867,7 @@ double branchedChain::setSelfEnergy(const double spacing, const double sig) {
 		selfEnergyPerParticle[i] = 0;
 	}
 
-	if(epsilon == 0.0) { return 0.0; }
+	/*if(epsilon == 0.0) { return 0.0; }
 	for(int i = 0; i < nm; i++) {
 		acc = 0; //accumumlated self energy for particle i
 		for(int j=i+1; j < nm; j++){
@@ -877,7 +881,7 @@ double branchedChain::setSelfEnergy(const double spacing, const double sig) {
 			}
 		}
 		selfEnergyPerParticle[i] = acc; //set self energy per particle in array
-	}
+	}*/
 	std::cerr << "Self Energy is " << epen << std::endl;
 	this->selfEnergy = epen;
 	return epen;

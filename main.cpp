@@ -381,7 +381,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		//std::cerr << "End to end distance is " << ete_dist.mean << std::endl;
 		std::cerr << "Segment averages are ";
 		for(int i = 0; i < edgeCount; i++){
-			std::cerr << ete_dists[i].mean << ",";
+			std::cerr << sqrt(ete_dists[i].mean) << ",";
 		}
 
 #ifdef NUMBINS

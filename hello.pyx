@@ -18,7 +18,7 @@ import Tkinter
 import tkMessageBox
 import matplotlib.image as mpimg
 import pickle
-import FloydWarshall as fw
+#import FloydWarshall as fw
 cimport numpy as np
 
 cdef extern from "dtypes.h":
@@ -205,21 +205,21 @@ def readFile(fname, expectFrames):
 		nr += fread(&b.rmax, sizeof(b.rmax), 1, a)
 		nr += fread(&b.density_sum[0], sizeof(b.density_sum[0]), 1000, a)
 		#Now load densities
-		try:
-			allDensities
-		except:
-			tallDensities = np.zeros( (numMonomers - numPhantoms, 1000), dtype=np.float64 )
-			allDensities  = np.zeros( (numMonomers - numPhantoms, 1000), dtype=np.float64 )
+		#try:
+		#	allDensities
+		#except:
+		#	tallDensities = np.zeros( (numMonomers - numPhantoms, 1000), dtype=np.float64 )
+		#	allDensities  = np.zeros( (numMonomers - numPhantoms, 1000), dtype=np.float64 )
 		for idi in range(numMonomers - numPhantoms):
 			nrd += fread(&denbuff, sizeof(denbuff[0]), 1000, a)			
-			for idj in range(1000):
-				allDensities[idi,idj] = denbuff[idj]
+			#for idj in range(1000):
+			#	allDensities[idi,idj] = denbuff[idj]
 
 		dsum = np.zeros(1000, dtype=np.float64)
 		for ii in range(1000):
 			dsum[ii] = b.density_sum[ii]
 
-		print np.sum(np.sum(allDensities,axis=0) - dsum)
+		#print np.sum(np.sum(allDensities,axis=0) - dsum)
 
 		nr += fread(&b.spacing, sizeof(b.spacing), 1, a)
 		nr += fread(&b.sigma, sizeof(b.sigma), 1, a)
@@ -320,8 +320,8 @@ def readFile(fname, expectFrames):
 		for i in range(1000):
 			dar[i] = b.density_sum[i]#/nps
 		dent += dar
-		tallDensities += allDensities
-		print "CHCK", np.sum(dent - np.sum(tallDensities,axis=0) )
+		#tallDensities += allDensities
+		#print "CHCK", np.sum(dent - np.sum(tallDensities,axis=0) )
 		dpc += 1.0
 	if Nt == 0 or dpc == 0:
 		print fname +" is bad"
@@ -333,7 +333,7 @@ def readFile(fname, expectFrames):
 	#print "R^2 is " + str(ro2t/Nt)
 	#print "dE/dL is " + str(desumt/Nt)
 	xa = np.linspace(0,b.rmax,1000)
-	rv = {"NumPoints":Nt, "NumLogEntries":dpc, "Rog2":ro2t/Nt, "DeDL":desumt/Nt, "XAxis":xa, "Density":dent, "Params":(b.spacing, b.epsilon,b.sigma), "deOLV":olv_des, "Rg2OLV":olv_rg2, "EdgeLength":olv_edgelen, "EdgeDist":olv_edgedist, "SegLen":olv_seglen, "labelTrans":label_trans, "EdgeCount":b.edgeCount, "AllDensities":tallDensities}
+	rv = {"NumPoints":Nt, "NumLogEntries":dpc, "Rog2":ro2t/Nt, "DeDL":desumt/Nt, "XAxis":xa, "Density":dent, "Params":(b.spacing, b.epsilon,b.sigma), "deOLV":olv_des, "Rg2OLV":olv_rg2, "EdgeLength":olv_edgelen, "EdgeDist":olv_edgedist, "SegLen":olv_seglen, "labelTrans":label_trans, "EdgeCount":b.edgeCount, "AllDensities":None}
 	#plt.plot(xa,dent/dpc)
 	#plt.show()
 	fclose(a)
@@ -412,7 +412,7 @@ def test(files, tensiondb, topofile, hasphantoms, zeroTensionLength):
 
 	bigList = []
 	for fn in glob(files):
-		td = readFile(fn,500)
+		td = readFile(fn,50000)
 		bigList.append(td)
 	sbl = sorted(bigList,key=myKey)
 	
