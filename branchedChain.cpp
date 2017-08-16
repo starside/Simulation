@@ -1056,8 +1056,9 @@ double branchedChain::energyDerivative(const double de){
 }
 
 double branchedChain::externalEnergy(const double T) {
-	double r = sqrt(diffSquared(&monomers[0].r, &monomers[numMonomers- numPhantoms - 1].r));
-	return -T*r;
+	jVector d = {{0,0,0}};
+	double r = diffSquared(&monomers[0].r, &d);
+	return r;
 }
 
 
@@ -1065,9 +1066,9 @@ void branchedChain::findDensity2D(Eigen::Matrix3Xd pos, double *dens, const int 
 	jVector rcm, monomer;
 	Eigen::Matrix3Xd rcmv = pos.rowwise().sum()/(double)pos.cols(); //finds CM
 	for(int d = 0; d < 3; d++) { //Copy Eigen vector to my jVector
-		rcm.vector[d] = rcmv(d,0);
+		rcm.vector[d] = 0;//rcmv(d,0);
 	}
-	for(int i = 0; i < numMonomers - numPhantoms; i++){
+	for(int i = 1; i < numMonomers - numPhantoms; i++){
 		jVector d = {{0,0,0}};
 		for(int d = 0; d < 3; d++){monomer.vector[d] = pos(d, i); } //copy to monomer
 		vectorSubV(&d,&monomer, &rcm); // Monomer offset from CM

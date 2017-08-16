@@ -507,6 +507,7 @@ int main(){
 	signal(SIGALRM, &sigSpeed ); alarm(INDICATOR_PERIOD);
 #ifdef LINEAR
 	mol1.createLinear(CHAINLENGTH - PHANTOMS);
+	mol1.saveTopofile(TOPOLOGY_FILE);
 	mol1.setLinearPositions(MOL_SPACING);
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }
 	std::cerr << "Linear: Num PHANTOMS " << mol1.numPhantoms << std::endl;
@@ -514,15 +515,16 @@ int main(){
 #ifdef ARBITRARY
 	std::cerr <<" Loading " << ADJ_FILE << std::endl;
 	mol1.loadAdjacency(CHAINLENGTH - PHANTOMS, ADJ_FILE, &generator);
+	mol1.saveTopofile(TOPOLOGY_FILE);
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }
 #endif
 #ifdef DENDRIMER
 	int mygen = 2;
 	std::cout << "Dendrimer Mass " << mol1.dendrimerMass(3,mygen) <<std::endl;
 	mol1.createDendrimerR(CHAINLENGTH-PHANTOMS, 3,mygen,&generator);
+	mol1.saveTopofile(TOPOLOGY_FILE);
 	if(PHANTOMS > 0){	mol1.insertPhantoms(CHAINLENGTH-PHANTOMS); }
 #endif
-	mol1.saveTopofile(TOPOLOGY_FILE);
 	mol1.enableDerivativeDensity(100.0, 20.0);
 	clock_t b,e;
 	b = clock();
