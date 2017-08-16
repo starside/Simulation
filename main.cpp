@@ -308,6 +308,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
 		// Save a set of points as a reference frame.
 		Eigen::Matrix3Xd reference_state = mol1->getMonomerPositions();
+		// Mean monomer locations
+		Eigen::Matrix3Xd mean_state = mol1->getMonomerPositions();
 #ifdef NUMBINS
 		//init labels and zero histogram
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
@@ -347,6 +349,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
 			Eigen::Affine3d orient = Find3DAffineTransform(new_state, reference_state);	// Perform Kabsch, with scale = 1.0
 			mol1->findDensity2D(orient.linear()*new_state, de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
 
 			//individual density
 			jVector rcm;
@@ -368,13 +371,35 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			ll.N++;
 		}
 		//output density
+		uint32_t denlen = DENSITY_BINS_2D*DENSITY_BINS_2D;
 		std::ofstream density2DFile;
-		density2DFile.open("density2d.csv", std::ios::out | std::ios::binary);
+		density2DFile.open("density2d.csv", std::ios::app | std::ios::binary);
 		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){
 			de2DArray[i] = de2DArray[i]/(double)ll.N ;
 		}
+		density2DFile.write((char*)&denlen, sizeof(uint32_t));
 		density2DFile.write((char*)de2DArray, DENSITY_BINS_2D*DENSITY_BINS_2D*sizeof(double) );
 		density2DFile.close();
+		//output v0, rg^2, tensions
+		std::ofstream textFile;
+		textFile.open("textdata.csv", std::ios::app);
+		textFile << MOL_EPSILON << "," << ll.rog2_sum/(double)ll.N << ",";
+		for(int i = 0; i < edgeCount; i++){
+			textFile << sqrt(ete_dists[i].mean);
+			if(i < edgeCount - 1){
+			 	textFile << ",";
+			 }
+		}
+		textFile << std::endl;
+		textFile.close();
+		//Output mean monomer positions
+		std::ofstream monomerFile;
+		monomerFile.open("monomer.csv", std::ios::app);
+		mean_state = mean_state/(double)ll.N;
+		Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "", "");
+		monomerFile << mean_state.format(CommaInitFmt) << std::endl;
+		monomerFile.close();
+
 
 		fclose(fp);
 		std::cerr << "Rg2 is " << ll.rog2_sum/(double)ll.N << " +- " << sqrt(org2.Variance()/(double)org2.n)  << " <cos> " << aveCos.mean << std::endl;
