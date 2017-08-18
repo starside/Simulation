@@ -68,7 +68,16 @@ inline double dotP( const jVector *a, const jVector *b) {
 	return v;
 }
 
-//dot two jVectors
+//cross product of two jVectors
+inline jVector crossP( const jVector *a, const jVector *b);
+inline jVector crossP( const jVector *a, const jVector *b) {
+	jVector c;
+	c.vector[0] = a->vector[1]*b->vector[2] - b->vector[1]*a->vector[2];
+	c.vector[1] = b->vector[0]*a->vector[2] - a->vector[0]*b->vector[2];
+	c.vector[2] = a->vector[0]*b->vector[1] - b->vector[0]*a->vector[1];
+	return c;
+}
+
 inline void scaleP(jVector *res, const jVector *a, const double s);
 inline void scaleP(jVector *res, const jVector *a, const double s) {
 	for(int i = 0; i < 3; i++) {
@@ -77,7 +86,7 @@ inline void scaleP(jVector *res, const jVector *a, const double s) {
 }
 
 //Add two jVectors
-inline void vectorSubP(jVector *__restrict__ res, const jVector * __restrict__ a, const jVector * __restrict__ b) {
+inline void vectorSubP(jVector * res, const jVector *  a, const jVector *  b) {
 	res->vector[0] = a->vector[0] - b->vector[0];
 	res->vector[1] = a->vector[1] - b->vector[1];
 	res->vector[2] = a->vector[2] - b->vector[2];

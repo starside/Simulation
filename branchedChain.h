@@ -12,6 +12,7 @@
 #include "data.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <utility>
 #include "onlineVariance.h"
 #include "Kabsch.h"
 
@@ -42,6 +43,9 @@ class branchedChain {
 		double sigma; //monomer interaction distance
 		double epsilon; //interaction energy
 		double beta; //bending energy
+
+		std::vector<std::pair<int,int>> symmmetryPairs;  //edges to check for symmetry change
+		double *symmetryMatrix;  // size of symmetryPairs^2
 
 		unsigned long int acceptedMoves, attemptedMoves, movesLastTimer;
 		int speedFlag; int indicatorCount;
@@ -102,6 +106,7 @@ class branchedChain {
 		int runMC(const int steps, stateGen *generator);
 		double energyDerivative(const double de);
 
+		void findDensity2DMonomer(Eigen::Matrix3Xd pos, int mon, double *dens, const int bins, const double rmax);
 		void findDensity2D(Eigen::Matrix3Xd pos, double *dens, const int bins, const double rmax);
 		void findDensity2D(double *dens, const int bins, const double rmax);
 
@@ -125,6 +130,11 @@ class branchedChain {
 		void loadState(const char *file, stateGen *gen, int *batch);
 
 		void printParams(std::ostream& os);
+
+		void setSymmetryPairs(); //hard coded hack
+		void deleteSymmetryPairs();
+		void symmetryExpectation();
+		void printSymmetry(double N);
 
 	private:
 		int saveIndex;					//the index in to monomers where the save data is

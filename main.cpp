@@ -230,7 +230,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 	char bname[500];
 	char pdname[500]; char ssname[500];
 	char command[1000];
-	double *de2DArray = new double[DENSITY_BINS_2D*DENSITY_BINS_2D]; //allocate 2D hist
+	int realMonomers = mol1->numMonomers - mol1->numPhantoms;
+	double *de2DArray = new double[DENSITY_BINS_2D*DENSITY_BINS_2D*realMonomers]; //allocate 2D hist
 	if(de2DArray == NULL) {
 		std::cerr << "Could not allocate memory!" << std::endl;
 		exit(0);
@@ -305,7 +306,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			avg_dist[i].setState(0,0,0);
 		}
 		//zero density
-		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
+		for(int i = 0; i < realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
 		// Save a set of points as a reference frame.
 		Eigen::Matrix3Xd reference_state = mol1->getMonomerPositions();
 		// Mean monomer locations
@@ -315,7 +316,6 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
 		avgr.setState(0,0,0);
 #endif
-
 		for(int f = 0; f < frames; f++) { //run this many times
 			mol1->runMC(snapshot,generator);
 			#ifdef LOG_STATE
@@ -348,7 +348,9 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			//Rotate molecule to reference state with Kabsch
 			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
 			Eigen::Affine3d orient = Find3DAffineTransform(new_state, reference_state);	// Perform Kabsch, with scale = 1.0
-			mol1->findDensity2D(orient.linear()*new_state, de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+			for(int im = 0; im < realMonomers; im++){
+				mol1->findDensity2DMonomer(orient.linear()*new_state,im, &de2DArray[im*DENSITY_BINS_2D*DENSITY_BINS_2D], DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+			}
 			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
 
 			//individual density
@@ -370,15 +372,17 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 			ll.N++;
 		}
+
 		//output density
 		uint32_t denlen = DENSITY_BINS_2D*DENSITY_BINS_2D;
 		std::ofstream density2DFile;
 		density2DFile.open("density2d.csv", std::ios::app | std::ios::binary);
-		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){
+		for(int i = 0; i < realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D; i++){
 			de2DArray[i] = de2DArray[i]/(double)ll.N ;
 		}
 		density2DFile.write((char*)&denlen, sizeof(uint32_t));
-		density2DFile.write((char*)de2DArray, DENSITY_BINS_2D*DENSITY_BINS_2D*sizeof(double) );
+		density2DFile.write((char*)&realMonomers, sizeof(int32_t));
+		density2DFile.write((char*)de2DArray, realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D*sizeof(double) );
 		density2DFile.close();
 		//output v0, rg^2, tensions
 		std::ofstream textFile;

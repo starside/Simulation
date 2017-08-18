@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sstream>
 #include <fstream>
+#include <cmath>
 #include "branchedChain.h"
 #include "definitions.h"
 
@@ -1062,6 +1063,25 @@ double branchedChain::externalEnergy(const double T) {
 }
 
 
+void branchedChain::findDensity2DMonomer(Eigen::Matrix3Xd pos, int mon, double *dens, const int bins, const double rmax){
+	jVector rcm, monomer;
+	Eigen::Matrix3Xd rcmv = pos.rowwise().sum()/(double)pos.cols(); //finds CM
+	for(int d = 0; d < 3; d++) { //Copy Eigen vector to my jVector
+		rcm.vector[d] = 0;//rcmv(d,0);
+	}
+	int i = mon;
+	jVector d = {{0,0,0}};
+	for(int d = 0; d < 3; d++){monomer.vector[d] = pos(d, i); } //copy to monomer
+	vectorSubV(&d,&monomer, &rcm); // Monomer offset from CM
+	int pbx = (int) floor(bins/2.0*(1.0 + d.vector[0]/rmax) );	// x bin
+	int pby = (int) floor(bins/2.0*(1.0 + d.vector[1]/rmax) );	// y bin
+	if(pbx >= bins || pby >= bins || pbx < 0 || pby < 0) {
+		std::cout << "Your rmax is too small!" <<std::endl;
+		exit(0);
+	}
+	dens[pbx + bins*pby] += 1.0; //normalization such that integra lof density is 1
+}
+
 void branchedChain::findDensity2D(Eigen::Matrix3Xd pos, double *dens, const int bins, const double rmax){
 	jVector rcm, monomer;
 	Eigen::Matrix3Xd rcmv = pos.rowwise().sum()/(double)pos.cols(); //finds CM
@@ -1273,4 +1293,69 @@ void stateGen::seed( RANDOMCLASS::result_type value) {
 
 stateGen::stateGen() {
 	seed(RANDOMCLASS::default_seed);
+}
+
+
+// Localized function for calculating cross products between monomer pairs, used in
+// moveFailed and moveAccepted
+double _pairCrossProduct(std::pair<int,int> edge1, std::pair<int,int> edge2, jMonomer *monomers);
+double _pairCrossProduct(std::pair<int,int> edge1, std::pair<int,int> edge2, jMonomer *monomers){
+	jVector v1, v2;
+	vectorSubP(&v1, &monomers[edge1.first].r, &monomers[edge1.second].r); //vector for edge1
+	vectorSubP(&v2, &monomers[edge2.first].r, &monomers[edge2.second].r); // vector for edge 2
+	jVector res = crossP(&v1, &v2);
+	int z = res.vector[2]; // z component
+	if(z < 0) {
+		return -1.0;
+	}else {
+		return 1.0;
+	}
+}
+
+//1 for accept, 0 for fail
+void branchedChain::printSymmetry(double N){
+	int mdim = symmmetryPairs.size();
+	int matrixsize = mdim*mdim;
+	for(int i = 0; i < mdim; i++){
+		for(int j = i + 1; j < mdim; j++){
+			std::pair<int,int> e1 = symmmetryPairs.at(i); // get edges
+			std::pair<int,int> e2 = symmmetryPairs.at(j);
+			std::cout << symmetryMatrix[i*mdim + j]*1000.0/N << ",";
+		}
+		std::cout << std::endl;
+	}
+}
+
+
+//1 for accept, 0 for fail
+void branchedChain::symmetryExpectation(){
+	int mdim = symmmetryPairs.size();
+	int matrixsize = mdim*mdim;
+	for(int i = 0; i < mdim; i++){
+		for(int j = i + 1; j < mdim; j++){
+			std::pair<int,int> e1 = symmmetryPairs.at(i); // get edges
+			std::pair<int,int> e2 = symmmetryPairs.at(j);
+			double cp = _pairCrossProduct(e1,e2, monomers);
+			symmetryMatrix[i*mdim + j] += 0.001*cp; //add 1/1000 instead of 1 to save domain space
+		}
+	}
+}
+
+void branchedChain::setSymmetryPairs(){
+	//Add edges to watch
+	if(symmmetryPairs.size() == 0) {
+		symmmetryPairs.push_back(std::make_pair(0,1));
+		symmmetryPairs.push_back(std::make_pair(0,2));
+		symmmetryPairs.push_back(std::make_pair(0,3));
+	}
+	int matrixsize = symmmetryPairs.size()*symmmetryPairs.size();
+	symmetryMatrix = new double[matrixsize]; //allocate transition matrix
+	for(int i = 0; i < matrixsize; i++) { //initialize values
+		symmetryMatrix[i] = 0;
+
+	}
+}
+
+void branchedChain::deleteSymmetryPairs() {
+	delete[] symmetryMatrix;
 }
