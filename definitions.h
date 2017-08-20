@@ -80,6 +80,8 @@
  #define INDICATOR_PERIOD 5.0
  #define INDICATOR_FILE_PERIOD 10 //how often to write indicator to a file
 
+ #define RG2_BINS 1024	//Bins for R_G^2 histogram
+
 
 //These are for calculating monomer histograms.  This should be disabled by default
  /*#define NUMBINS 500

@@ -13,6 +13,12 @@ extern "C" {
 }
 #include <math.h>
 #include <iostream>
+#include <vector>
+#include <utility>
+#include <iostream>
+#include <algorithm>
+#include <Eigen/Geometry>
+#include <cmath>
 #include "definitions.h"
 #include "dtypes.h"
 
@@ -116,5 +122,9 @@ inline double sinc(const double x) {
 		return sin(x)/x;
 	}
 }
+
+double circleArcSin(double sine, double cosine);
+Eigen::Vector3d monomerSub(Eigen::Matrix3Xd monomers, const int a, const int b);
+int calculatePerm(Eigen::Matrix3Xd in);
 
 #endif /* DATA_H_ */

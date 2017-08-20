@@ -267,6 +267,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 	for(int i = 0; i < mol1->numMonomers - mol1->numPhantoms; i++) {
 		allDensity[i] = new double[DENSITY_BINS];
 	}
+	//Histogram bins for R_G^2
+	unsigned int rg2HistogramBins[RG2_BINS];
 
 	mol1->runMC(EQUILIBRATION,generator); //equilibrate the run
 
@@ -307,10 +309,15 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		}
 		//zero density
 		for(int i = 0; i < realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
-		// Save a set of points as a reference frame.
-		Eigen::Matrix3Xd reference_state = mol1->getMonomerPositions();
 		// Mean monomer locations
 		Eigen::Matrix3Xd mean_state = mol1->getMonomerPositions();
+		//Zero rg2 histogram
+		for(int i = 0; i < RG2_BINS; i++){rg2HistogramBins[i]=0;}
+		// Permutation
+		double perm = 0;
+		mol1->permAccMatrix << 0,0,0,0;
+		mol1->permFailMatrix << 0,0,0,0;
+		mol1->lastPerm = calculatePerm(mean_state); // initialize permuation
 #ifdef NUMBINS
 		//init labels and zero histogram
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
@@ -323,8 +330,10 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 				mol1->writeDataLine(fp,generator);
 			}
 			#endif
+			ll.N++; //Increment data counter
 			double _trg2 = mol1->findRg();
 			ll.rog2_sum += _trg2; org2.addValue(_trg2);
+			basicHistogram(ll.rog2_sum/(double)ll.N, rg2HistogramBins, RG2_BINS, 0, DENSITY_MAX_DOMAIN); //rg^2 histogram
 			double _tde = mol1->energyDerivative(DE);
 			ll.de_sum += _tde; odesum.addValue(_tde);
 			mol1->edgeLength(ete_dists, avg_dist, seg_length, label_trans); //find edge length and position
@@ -347,11 +356,14 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 			//Rotate molecule to reference state with Kabsch
 			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
-			Eigen::Affine3d orient = Find3DAffineTransform(new_state, reference_state);	// Perform Kabsch, with scale = 1.0
+			Eigen::Affine3d orient = Find3DAffineTransform(new_state, mean_state/(double)ll.N);	// Perform Kabsch, with scale = 1.0
 			for(int im = 0; im < realMonomers; im++){
 				mol1->findDensity2DMonomer(orient.linear()*new_state,im, &de2DArray[im*DENSITY_BINS_2D*DENSITY_BINS_2D], DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
 			}
 			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
+
+			// Calculate permutation
+			perm += (double)calculatePerm(new_state);
 
 			//individual density
 			jVector rcm;
@@ -369,8 +381,6 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			}
 			//Now average to online variables
 #endif
-
-			ll.N++;
 		}
 
 		//output density
@@ -403,9 +413,24 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "", "");
 		monomerFile << mean_state.format(CommaInitFmt) << std::endl;
 		monomerFile.close();
+		//Output R_G^2 histogram
+		std::ofstream rg2File;
+		rg2File.open("rg2.csv", std::ios::app | std::ios::binary);
+		//rg2HistogramBins
+		unsigned int _nrgb = RG2_BINS;
+		rg2File.write((char*)&_nrgb, sizeof(_nrgb));
+		rg2File.write((char*)rg2HistogramBins, sizeof(uint32_t)*RG2_BINS); //write histogram data
+		double rg2labels[RG2_BINS]; //create histogram labels
+		basicHistogramLabels(rg2labels, rg2HistogramBins, RG2_BINS, 0, DENSITY_MAX_DOMAIN);
+		rg2File.write((char*)rg2labels, sizeof(double)*RG2_BINS);
+		rg2File.close();
 
 
 		fclose(fp);
+		std::cerr << "Permuation average is " << perm/(double)ll.N << std::endl;
+		std::cerr << "Permuation matrix is " << std::endl;
+		Eigen::Matrix<double,2,2> totalTries = mol1->permAccMatrix + mol1->permFailMatrix;
+		std::cerr << mol1->permAccMatrix.array()/totalTries.array() << std::endl;
 		std::cerr << "Rg2 is " << ll.rog2_sum/(double)ll.N << " +- " << sqrt(org2.Variance()/(double)org2.n)  << " <cos> " << aveCos.mean << std::endl;
 		//std::cerr << "End to end distance is " << ete_dist.mean << std::endl;
 		std::cerr << "Segment averages are ";

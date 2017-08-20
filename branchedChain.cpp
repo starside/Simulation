@@ -17,6 +17,7 @@
 #include <cmath>
 #include "branchedChain.h"
 #include "definitions.h"
+#include "data.h"
 
 inline double unitPot(const double d2, const double sig);
 
@@ -476,6 +477,7 @@ branchedChain::branchedChain(const int num, const int dim){
 		exit(EXIT_FAILURE);
 	}
 	//Now that that is done, on with the good stuff
+	lastPerm = 0;
 	space_dim = dim;
 	numMonomers = num;
 	numPhantoms = 0;
@@ -748,12 +750,14 @@ int branchedChain::runMC(const int steps, stateGen *generator) {
 	        double pAcc = std::min(1.0, exp(-(newenergy-this->energy) ) );
 	        if(accdist(*generator) > pAcc) {
 	        	attemptedMoves++;
+	        	onFailedMove();
 	            this->restore();
 	            i += -1;
 				continue;
 	        } else { //accept the new move
 	            this->energy = newenergy;
 	            acceptedMoves++;
+	            onAcceptedMove();
 	        }
 
 		}
@@ -1304,7 +1308,7 @@ double _pairCrossProduct(std::pair<int,int> edge1, std::pair<int,int> edge2, jMo
 	vectorSubP(&v1, &monomers[edge1.first].r, &monomers[edge1.second].r); //vector for edge1
 	vectorSubP(&v2, &monomers[edge2.first].r, &monomers[edge2.second].r); // vector for edge 2
 	jVector res = crossP(&v1, &v2);
-	int z = res.vector[2]; // z component
+	double z = res.vector[2]; // z component
 	if(z < 0) {
 		return -1.0;
 	}else {
@@ -1320,7 +1324,7 @@ void branchedChain::printSymmetry(double N){
 		for(int j = i + 1; j < mdim; j++){
 			std::pair<int,int> e1 = symmmetryPairs.at(i); // get edges
 			std::pair<int,int> e2 = symmmetryPairs.at(j);
-			std::cout << symmetryMatrix[i*mdim + j]*1000.0/N << ",";
+			std::cout << symmetryMatrix[i*mdim + j]/N << ",";
 		}
 		std::cout << std::endl;
 	}
@@ -1336,7 +1340,7 @@ void branchedChain::symmetryExpectation(){
 			std::pair<int,int> e1 = symmmetryPairs.at(i); // get edges
 			std::pair<int,int> e2 = symmmetryPairs.at(j);
 			double cp = _pairCrossProduct(e1,e2, monomers);
-			symmetryMatrix[i*mdim + j] += 0.001*cp; //add 1/1000 instead of 1 to save domain space
+			symmetryMatrix[i*mdim + j] += cp; //add 1/1000 instead of 1 to save domain space
 		}
 	}
 }
@@ -1358,4 +1362,17 @@ void branchedChain::setSymmetryPairs(){
 
 void branchedChain::deleteSymmetryPairs() {
 	delete[] symmetryMatrix;
+}
+
+void branchedChain::onFailedMove(){
+	int cp = calculatePerm(getMonomerPositions());
+	permFailMatrix(cp,lastPerm) += 0.001;
+	lastPerm = cp;
+}
+
+void branchedChain::onAcceptedMove(){
+	int cp = calculatePerm(getMonomerPositions());
+	permAccMatrix(cp,lastPerm) += 0.001;
+	lastPerm = cp;
+
 }

@@ -47,6 +47,10 @@ class branchedChain {
 		std::vector<std::pair<int,int>> symmmetryPairs;  //edges to check for symmetry change
 		double *symmetryMatrix;  // size of symmetryPairs^2
 
+		Eigen::Matrix<double,2,2> permAccMatrix;
+		Eigen::Matrix<double,2,2> permFailMatrix;
+		int lastPerm; 
+
 		unsigned long int acceptedMoves, attemptedMoves, movesLastTimer;
 		int speedFlag; int indicatorCount;
 		/*
@@ -145,6 +149,9 @@ class branchedChain {
 		void unlinkTwo(const int src, const int dest);
 		int rotateMonomer(const int start, const int nofollow, const jMatrix *rot, const jVector *base); //recursive in-place monomer rotation
 		void rotateMonomersNR(const int i, const int nofollow, const jMatrix *rot, const jVector *base);
+
+		void onFailedMove();
+		void onAcceptedMove();
 		jMonomer *_fmonom16;
 		double *selfEnergyPerParticle;
 		//The following are for binning particles
