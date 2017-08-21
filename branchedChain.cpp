@@ -381,7 +381,12 @@ void _setRandPos(branchedChain *mol, unsigned int last, stateGen * generator) {
 		int cur = mol->monomers[last].branch[i];
 		if(cur != last && cur != mol->monomers[last].zeroBranch) { //assign adjacent monomers positions
 			double theta = acos(ca(*generator)); double phi = phim(*generator); //create random vector
-			double x = mol->spacing*sin(theta)*cos(phi); double y = mol->spacing*sin(theta)*sin(phi); double z = mol->spacing*cos(theta);
+			double x,y,z;
+			if(mol->space_dim == 3) {
+				x = mol->spacing*sin(theta)*cos(phi); y = mol->spacing*sin(theta)*sin(phi); z = mol->spacing*cos(theta);
+			} else {
+				x = mol->spacing*cos(phi); y = mol->spacing*sin(phi); z = 0;
+			}
 			np.vector[0] = x; np.vector[1] = y; np.vector[2] = z; np.vector[3] = 0;
 			vectorAddP(&res, &np, &mol->monomers[last].r); //add new vector to prev
 			mol->smPos(cur, res.vector[0], res.vector[1], res.vector[2]); //set position
@@ -393,9 +398,8 @@ void _setRandPos(branchedChain *mol, unsigned int last, stateGen * generator) {
 
 //Load a .csv adjacency matrix and build it.
 void branchedChain::loadAdjacency(int mass, const char *fname, stateGen * generator) {
-	int32_t dtype;
 	int32_t dim= 666;
-	int64_t *adj;
+	int32_t *adj;
 	int count = 0;
 
 	FILE *fp = fopen(fname, "rb");
@@ -403,16 +407,14 @@ void branchedChain::loadAdjacency(int mass, const char *fname, stateGen * genera
 		std::cerr << "Could not find file "<< fname << std::endl;
 		exit(0);
 	}
-	count += fread(&dtype, sizeof(dtype), (size_t)1, fp);
 	count += fread(&dim, sizeof(dim), (size_t)1, fp);
-	adj = new int64_t[dim*dim];
+	adj = new int32_t[dim*dim];
 	count += fread(adj, sizeof(adj[0]), (size_t)dim*dim, fp);
 	fclose(fp);
 	if (dim != mass) {
 		std::cerr << "adjacency matrix is not of the correct size, " << mass << "Size is " << dim << std::endl;
 		exit(0);
 	}
-	std::cerr << "Type is " << dtype << std::endl;
 	std::cerr << "Dimension is " << dim << std::endl;
 	//determine largest functionality
 	int maxfunc=0;
@@ -750,14 +752,14 @@ int branchedChain::runMC(const int steps, stateGen *generator) {
 	        double pAcc = std::min(1.0, exp(-(newenergy-this->energy) ) );
 	        if(accdist(*generator) > pAcc) {
 	        	attemptedMoves++;
-	        	onFailedMove();
+	        	//onFailedMove();
 	            this->restore();
 	            i += -1;
 				continue;
 	        } else { //accept the new move
 	            this->energy = newenergy;
 	            acceptedMoves++;
-	            onAcceptedMove();
+	            //onAcceptedMove();
 	        }
 
 		}
@@ -1365,14 +1367,17 @@ void branchedChain::deleteSymmetryPairs() {
 }
 
 void branchedChain::onFailedMove(){
+#ifdef PERMUTATIONS
 	int cp = calculatePerm(getMonomerPositions());
 	permFailMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
+#endif
 }
 
 void branchedChain::onAcceptedMove(){
+#ifdef PERMUTATIONS
 	int cp = calculatePerm(getMonomerPositions());
 	permAccMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
-
+#endif
 }

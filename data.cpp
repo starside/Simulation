@@ -14,8 +14,9 @@
 void basicHistogram(double value, unsigned int *bins, unsigned int nbins, double leftEdge, double rightEdge){
 	double nv = (value - leftEdge)/(rightEdge - leftEdge);
 	if(nv > 1.0 or nv < 0.0) {
-		std::cerr << "Hitogram value out of bounds" << std::endl;
-		exit(0);
+		//std::cerr << "Hitogram value out of bounds" << std::endl;
+		//exit(0);
+		return;
 	}
 	double dn = 1.0/(double) nbins;
 	unsigned int i = floor(nv/dn);

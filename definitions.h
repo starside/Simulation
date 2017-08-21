@@ -36,7 +36,7 @@
  #define MOL_BETA	 4.0 //1.0  //Bending energy
 
 //External field
-#define EXTERNAL_ENERGY_COEFF 100.0
+#define EXTERNAL_ENERGY_COEFF 0
 #define MY_TENSION 0.0
 
 #define TI_FILE "logfile.csv" //Thermodynamic integration state file
@@ -48,17 +48,17 @@
 #define MODE_RUN
 
 //The maximum functionality of the monomer.  Anything less than 2 is a gas
-#define DENDRIMER
+//#define DENDRIMER
 //#define LINEAR
-//#define ARBITRARY
+#define ARBITRARY
 
 #ifndef FUNCTIONALITY  //this if block is in the event FUNCTIONALITY is specified in "temp_params.h"
 	#define FUNCTIONALITY 3
 #endif 
 #define REPEAT_PHANTOMS 5 //#Must be Odd! 0,1,3,5,7,9,...
-#define PHANTOMS 9*REPEAT_PHANTOMS
-#define CHAINLENGTH 10 + PHANTOMS
-#define DECORR_TIME 2500//0//0//0//0 //number of moves to relax the energy
+#define PHANTOMS 35*REPEAT_PHANTOMS
+#define CHAINLENGTH 36 + PHANTOMS
+#define DECORR_TIME 1000//0//0//0//0 //number of moves to relax the energy
 #define EQUILIBRATION DECORR_TIME//*10*5
 #define SNAPSHOT DECORR_TIME/10
 //#define MONOMER_RADIUS 1.1//1.414213562
@@ -66,7 +66,7 @@
 
 #define DE 0.001 //derivative increment
 #define DENSITY_BINS 1000  //changing this will require manually chaning the python analysis file
-#define DENSITY_MAX_DOMAIN 5.5 //CHAINLENGTH*MOL_SPACING //This is probably too conservative
+#define DENSITY_MAX_DOMAIN 10.5 //CHAINLENGTH*MOL_SPACING //This is probably too conservative
 
 //2D density uses the bounds above
 #define DENSITY_BINS_2D 128 //Use power of 2
@@ -74,13 +74,16 @@
  //Low Level.  Do not change unless you know what you are doing
  #define MAXBRANCHES FUNCTIONALITY //This is low level.  Only change FUNCTIONALITY
 
+// Watch permuations of first 4 monomers.  EXPENSIVE
+// #define PERMUTATIONS
+
  //Just Run mode parameters
  #define FRAME_PREFIX "Dend5g"
 
  #define INDICATOR_PERIOD 5.0
  #define INDICATOR_FILE_PERIOD 10 //how often to write indicator to a file
 
- #define RG2_BINS 1024	//Bins for R_G^2 histogram
+ #define RG2_BINS 1024*4	//Bins for R_G^2 histogram
 
 
 //These are for calculating monomer histograms.  This should be disabled by default

@@ -333,7 +333,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			ll.N++; //Increment data counter
 			double _trg2 = mol1->findRg();
 			ll.rog2_sum += _trg2; org2.addValue(_trg2);
-			basicHistogram(ll.rog2_sum/(double)ll.N, rg2HistogramBins, RG2_BINS, 0, DENSITY_MAX_DOMAIN); //rg^2 histogram
+			basicHistogram(ll.rog2_sum/(double)ll.N, rg2HistogramBins, RG2_BINS, 1, 4); //rg^2 histogram
 			double _tde = mol1->energyDerivative(DE);
 			ll.de_sum += _tde; odesum.addValue(_tde);
 			mol1->edgeLength(ete_dists, avg_dist, seg_length, label_trans); //find edge length and position
@@ -362,8 +362,10 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			}
 			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
 
+#ifdef PERMUTATIONS
 			// Calculate permutation
 			perm += (double)calculatePerm(new_state);
+#endif
 
 			//individual density
 			jVector rcm;
@@ -425,12 +427,18 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		rg2File.write((char*)rg2labels, sizeof(double)*RG2_BINS);
 		rg2File.close();
 
+		// Write permutation state to file
+		std::ofstream symmetryFile;
+		Eigen::Matrix<double,2,2> totalTries = mol1->permAccMatrix + mol1->permFailMatrix;
+		Eigen::Matrix<double,2,2> symmRes = mol1->permAccMatrix.array()/totalTries.array();
+		symmetryFile.open("symmetry.csv", std::ios::app);
+		symmetryFile << perm/(double)ll.N << ",";  //average permuation.  Should be 0.5
+		symmetryFile << symmRes.format(CommaInitFmt) << std::endl;
+		symmetryFile.close();
+
 
 		fclose(fp);
-		std::cerr << "Permuation average is " << perm/(double)ll.N << std::endl;
-		std::cerr << "Permuation matrix is " << std::endl;
-		Eigen::Matrix<double,2,2> totalTries = mol1->permAccMatrix + mol1->permFailMatrix;
-		std::cerr << mol1->permAccMatrix.array()/totalTries.array() << std::endl;
+		
 		std::cerr << "Rg2 is " << ll.rog2_sum/(double)ll.N << " +- " << sqrt(org2.Variance()/(double)org2.n)  << " <cos> " << aveCos.mean << std::endl;
 		//std::cerr << "End to end distance is " << ete_dist.mean << std::endl;
 		std::cerr << "Segment averages are ";
