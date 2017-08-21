@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <string>
 #include <math.h>
 #include <random>
 #include <stdlib.h>
@@ -385,21 +386,27 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 #endif
 		}
 
+		double v0 = MOL_EPSILON;
 		//output density
 		uint32_t denlen = DENSITY_BINS_2D*DENSITY_BINS_2D;
 		std::ofstream density2DFile;
-		density2DFile.open("density2d.csv", std::ios::app | std::ios::binary);
+		std::stringstream density2DFileName;
+		density2DFileName << "density2d_" << generator->Seed << ".csv";
+		density2DFile.open( density2DFileName.str(), std::ios::app | std::ios::binary);
 		for(int i = 0; i < realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D; i++){
 			de2DArray[i] = de2DArray[i]/(double)ll.N ;
 		}
+		density2DFile.write((char*)&v0, sizeof(v0));
 		density2DFile.write((char*)&denlen, sizeof(uint32_t));
 		density2DFile.write((char*)&realMonomers, sizeof(int32_t));
 		density2DFile.write((char*)de2DArray, realMonomers*DENSITY_BINS_2D*DENSITY_BINS_2D*sizeof(double) );
 		density2DFile.close();
 		//output v0, rg^2, tensions
 		std::ofstream textFile;
-		textFile.open("textdata.csv", std::ios::app);
-		textFile << MOL_EPSILON << "," << ll.rog2_sum/(double)ll.N << ",";
+		std::stringstream textFileName;
+		textFileName << "textdata_" << generator->Seed << ".csv";
+		textFile.open(textFileName.str(), std::ios::app);
+		textFile << v0 << "," << ll.rog2_sum/(double)ll.N << ",";
 		for(int i = 0; i < edgeCount; i++){
 			textFile << sqrt(ete_dists[i].mean);
 			if(i < edgeCount - 1){
@@ -410,16 +417,21 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		textFile.close();
 		//Output mean monomer positions
 		std::ofstream monomerFile;
-		monomerFile.open("monomer.csv", std::ios::app);
+		std::stringstream monomerFileName;
+		monomerFileName << "monomer_" << generator->Seed << ".csv";
+		monomerFile.open(monomerFileName.str(), std::ios::app);
 		mean_state = mean_state/(double)ll.N;
 		Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "", "");
-		monomerFile << mean_state.format(CommaInitFmt) << std::endl;
+		monomerFile << v0 << "," << mean_state.format(CommaInitFmt) << std::endl;
 		monomerFile.close();
 		//Output R_G^2 histogram
 		std::ofstream rg2File;
-		rg2File.open("rg2.csv", std::ios::app | std::ios::binary);
+		std::stringstream rg2FileName;
+		rg2FileName << "rg2_" << generator->Seed << ".csv";
+		rg2File.open(rg2FileName.str(), std::ios::app | std::ios::binary);
 		//rg2HistogramBins
 		unsigned int _nrgb = RG2_BINS;
+		rg2File.write((char*)&v0, sizeof(v0));
 		rg2File.write((char*)&_nrgb, sizeof(_nrgb));
 		rg2File.write((char*)rg2HistogramBins, sizeof(uint32_t)*RG2_BINS); //write histogram data
 		double rg2labels[RG2_BINS]; //create histogram labels
@@ -429,9 +441,12 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 		// Write permutation state to file
 		std::ofstream symmetryFile;
+		std::stringstream symmetryFileName;
+		symmetryFileName << "symmetry_" << generator->Seed << ".csv";
 		Eigen::Matrix<double,2,2> totalTries = mol1->permAccMatrix + mol1->permFailMatrix;
 		Eigen::Matrix<double,2,2> symmRes = mol1->permAccMatrix.array()/totalTries.array();
-		symmetryFile.open("symmetry.csv", std::ios::app);
+		symmetryFile.open(symmetryFileName.str(), std::ios::app);
+		symmetryFile << v0 << ",";
 		symmetryFile << perm/(double)ll.N << ",";  //average permuation.  Should be 0.5
 		symmetryFile << symmRes.format(CommaInitFmt) << std::endl;
 		symmetryFile.close();

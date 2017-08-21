@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-fh = open("density2d.csv","rb")
+fh = open("density2d_17190222644612017813.csv","rb")
 
 for i in range(40):
-	print i
+	v0 = size = np.fromfile(fh,dtype=np.float64,count=1)
+	print (v0,i)
 	size = np.fromfile(fh,dtype=np.int32,count=1)
 	monomers = np.fromfile(fh, dtype=np.int32,count=1)
 	dim = int(np.sqrt(size))
