@@ -58,7 +58,7 @@
 #define REPEAT_PHANTOMS 5 //#Must be Odd! 0,1,3,5,7,9,...
 #define PHANTOMS 35*REPEAT_PHANTOMS
 #define CHAINLENGTH 36 + PHANTOMS
-#define DECORR_TIME 1000//0//0//0//0 //number of moves to relax the energy
+#define DECORR_TIME 3000//0//0//0//0 //number of moves to relax the energy
 #define EQUILIBRATION DECORR_TIME//*10*5
 #define SNAPSHOT DECORR_TIME/10
 //#define MONOMER_RADIUS 1.1//1.414213562
