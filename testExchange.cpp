@@ -34,22 +34,23 @@ bool sort_function(std::pair<int, double> a, std::pair<int, double> b) {
 	return a.second < b.second;
 }
 
-int calculatePerm(Eigen::Matrix3Xd in);
-int calculatePerm(Eigen::Matrix3Xd in){
+int calculatePerm(Eigen::Matrix3Xd in, int frame[3]);
+int calculatePerm(Eigen::Matrix3Xd in, int frame[3]){
+	//int frame[3] = {1,2,3};
 	int basei = 0; // base monomer
-	int basej = 1;
-	int numMonomers = 4;
+	int basej = frame[0]; // reference monomer
+	int numMonomers = 3;
 	// A list of pairs that contains a monomer and the angle on the unit circle
 	std::vector<std::pair<int, double>> perm;
 	//Calculate cross products
 	Eigen::Vector3d cp, vec1,vec2;
-	for(int i = basej; i < numMonomers; i++) {
-			cp = monomerSub(in, basei, basej).cross(monomerSub(in,basei,i));
+	for(int i = 0; i < numMonomers; i++) {
+			cp = monomerSub(in, basei, basej).cross(monomerSub(in,basei,frame[i]));
 			vec1 =  monomerSub(in, basei, basej);
-			vec2 = monomerSub(in,basei,i);
+			vec2 = monomerSub(in,basei,frame[i]);
 			double cosa = vec1.dot(vec2);
 			double sina = cp(2); //sin of angle
-			perm.push_back(std::make_pair(i,circleArcSin(sina, cosa)));
+			perm.push_back(std::make_pair(frame[i],circleArcSin(sina, cosa)));
 	}
 
 	//Sort the permuation
@@ -72,13 +73,14 @@ int main() {
 			in(row,col) = 0;
 		}
 	}
-	double thetas[3] = {0, 0.5, 0.2};
+	double thetas[3] = {0, 0.5, 1.2};
 	for(int m = 0; m < 3; m++){
 		in(0, 1 + m) = std::cos(thetas[m]+M_PI/2); // x
 		in(1, 1 + m) = std::sin(thetas[m]+M_PI/2); // y
 	}
 
-	int perm_number = calculatePerm(in);
+	int frame[3] = {1,2,3};
+	int perm_number = calculatePerm(in, frame);
 	std::cout << "Permuation is " << perm_number << std::endl;
 
 

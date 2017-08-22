@@ -100,6 +100,7 @@ class branchedChain {
 
 		//return monomer positions as eigen matrix
 		Eigen::Matrix3Xd getMonomerPositions();
+		Eigen::Matrix3Xd getCorePositions(int frame[]);
 
 		void findCm(jVector *res); //finds the center of mass
 		void findStructureFactorRadial(double *result, size_t rlen, double qmax);

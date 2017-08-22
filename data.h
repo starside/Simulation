@@ -125,6 +125,6 @@ inline double sinc(const double x) {
 
 double circleArcSin(double sine, double cosine);
 Eigen::Vector3d monomerSub(Eigen::Matrix3Xd monomers, const int a, const int b);
-int calculatePerm(Eigen::Matrix3Xd in);
+int calculatePerm(Eigen::Matrix3Xd in, int frame[]);
 
 #endif /* DATA_H_ */

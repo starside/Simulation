@@ -752,14 +752,14 @@ int branchedChain::runMC(const int steps, stateGen *generator) {
 	        double pAcc = std::min(1.0, exp(-(newenergy-this->energy) ) );
 	        if(accdist(*generator) > pAcc) {
 	        	attemptedMoves++;
-	        	//onFailedMove();
+	        	onFailedMove();
 	            this->restore();
 	            i += -1;
 				continue;
 	        } else { //accept the new move
 	            this->energy = newenergy;
 	            acceptedMoves++;
-	            //onAcceptedMove();
+	            onAcceptedMove();
 	        }
 
 		}
@@ -1286,6 +1286,18 @@ Eigen::Matrix3Xd branchedChain::getMonomerPositions(){
 	return in;
 }
 
+//get core monomer positions
+Eigen::Matrix3Xd branchedChain::getCorePositions(int frame[]){
+	int nm = 4;
+	Eigen::Matrix3Xd in(3,nm);
+	for (int row = 0; row < in.rows(); row++) {
+		for (int col = 0; col < in.cols(); col++) {
+			in(row, col) = monomers[frame[col]].r.vector[row];
+		}
+	}
+	return in;
+}
+
 RANDOMCLASS::result_type stateGen::operator()() {
 	zCount++;
 	return RANDOMCLASS::operator()();
@@ -1368,7 +1380,8 @@ void branchedChain::deleteSymmetryPairs() {
 
 void branchedChain::onFailedMove(){
 #ifdef PERMUTATIONS
-	int cp = calculatePerm(getMonomerPositions());
+	int perm[] = {PERMCORE};
+	int cp = calculatePerm(getMonomerPositions(), perm);
 	permFailMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
 #endif
@@ -1376,7 +1389,8 @@ void branchedChain::onFailedMove(){
 
 void branchedChain::onAcceptedMove(){
 #ifdef PERMUTATIONS
-	int cp = calculatePerm(getMonomerPositions());
+	int perm[] = {PERMCORE};
+	int cp = calculatePerm(getMonomerPositions(), perm);
 	permAccMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
 #endif
