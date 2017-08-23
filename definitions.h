@@ -32,7 +32,7 @@
 
  //Molecule parameters
  #define MOL_SPACING 1.0/0.4/1.02 //2.0/1.39388
- #define MOL_SIGMA	 0.5//MOL_SPACING*0.95
+ #define MOL_SIGMA	 1.25//MOL_SPACING*0.95
  #define MOL_BETA	 4.0 //1.0  //Bending energy
 
 //External field

@@ -316,6 +316,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 
 		//Zero rg2 histogram
 		for(int i = 0; i < RG2_BINS; i++){rg2HistogramBins[i]=0;}
+#if SPACE_DIMENSION == 2
 		// Permutation
 		double perm = 0;
 		mol1->permAccMatrix << 0,0,0,0;
@@ -324,6 +325,8 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		int lastPerm = mol1->lastPerm;
 		unsigned int nperm1 = 0;
 		unsigned int nperm2 = 0;
+#endif
+
 #ifdef NUMBINS
 		//init labels and zero histogram
 		basicHistogramLabels( monoHistLabels, monoHist, NUMBINS, HISTLEFT, HISTRIGHT); //calculate histogram labels, bin center
@@ -363,6 +366,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			//Rotate molecule to reference state with Kabsch
 			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
 			Eigen::Affine3d orient = Find3DAffineTransform(new_state, mean_state/(double)ll.N);	// Perform Kabsch, with scale = 1.0
+#if SPACE_DIMENSION == 2
 			if(calculatePerm(new_state, permframe) == lastPerm ) {
 				mol1->findDensity2D(orient.linear()*mol1->getMonomerPositions(), de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
 				mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
@@ -370,9 +374,16 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			} else {
 				nperm2++;
 			}
+#else
+			mol1->findDensity2D(orient.linear()*mol1->getMonomerPositions(), de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
+#endif
+
+#if SPACE_DIMENSION == 2
 #ifdef PERMUTATIONS
 			// Calculate permutation
 			perm += (double)calculatePerm(new_state, permframe);
+#endif
 #endif
 
 			//individual density
@@ -446,6 +457,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		rg2File.write((char*)rg2labels, sizeof(double)*RG2_BINS);
 		rg2File.close();
 
+#if SPACE_DIMENSION == 2
 		// Write permutation state to file
 		std::ofstream symmetryFile;
 		std::stringstream symmetryFileName;
@@ -457,10 +469,9 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		symmetryFile << perm/(double)ll.N << ",";  //average permuation.  Should be 0.5
 		symmetryFile << symmRes.format(CommaInitFmt) << std::endl;
 		symmetryFile.close();
-
-
-		fclose(fp);
 		std::cerr << "Number of permuations type 1 is " << nperm1 << " and 2 is " << nperm2 << std::endl;
+#endif	
+		fclose(fp);
 		std::cerr << "Rg2 is " << ll.rog2_sum/(double)ll.N << " +- " << sqrt(org2.Variance()/(double)org2.n)  << " <cos> " << aveCos.mean << std::endl;
 		//std::cerr << "End to end distance is " << ete_dist.mean << std::endl;
 		std::cerr << "Segment averages are ";

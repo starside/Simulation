@@ -986,7 +986,7 @@ double exp1(double x) {
 }
 
 inline double unitPot(const double d2, const double sig){
-	double x = d2/(sig*sig);
+	double x = (SPACE_DIMENSION/2.0)*d2/(sig*sig);
 	return (1.0/(M_PI*sig*sig))*exp1(-x);
 }
 
@@ -1313,7 +1313,6 @@ stateGen::stateGen() {
 	seed(RANDOMCLASS::default_seed);
 }
 
-
 // Localized function for calculating cross products between monomer pairs, used in
 // moveFailed and moveAccepted
 double _pairCrossProduct(std::pair<int,int> edge1, std::pair<int,int> edge2, jMonomer *monomers);
@@ -1379,19 +1378,23 @@ void branchedChain::deleteSymmetryPairs() {
 }
 
 void branchedChain::onFailedMove(){
+#if SPACE_DIMENSION == 2
 #ifdef PERMUTATIONS
 	int perm[] = {PERMCORE};
 	int cp = calculatePerm(getMonomerPositions(), perm);
 	permFailMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
 #endif
+#endif
 }
 
 void branchedChain::onAcceptedMove(){
+#if SPACE_DIMENSION == 2
 #ifdef PERMUTATIONS
 	int perm[] = {PERMCORE};
 	int cp = calculatePerm(getMonomerPositions(), perm);
 	permAccMatrix(cp,lastPerm) += 0.001;
 	lastPerm = cp;
+#endif
 #endif
 }
