@@ -231,7 +231,9 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 	char bname[500];
 	char pdname[500]; char ssname[500];
 	char command[1000];
+#ifdef PERMCORE
 	int permframe[] = {PERMCORE};
+#endif
 	int realMonomers = mol1->numMonomers - mol1->numPhantoms;
 	double *de2DArray = new double[DENSITY_BINS_2D*DENSITY_BINS_2D]; //allocate 2D hist
 	if(de2DArray == NULL) {

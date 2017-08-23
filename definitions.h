@@ -31,8 +31,8 @@
 #define LOG_STATE 10
 
  //Molecule parameters
- #define MOL_SPACING 1.0/0.4/1.02 //2.0/1.39388
- #define MOL_SIGMA	 1.25//MOL_SPACING*0.95
+ #define MOL_SPACING 1.0 ///0.4/1.02 //2.0/1.39388
+ #define MOL_SIGMA	 0.5//MOL_SPACING*0.95
  #define MOL_BETA	 4.0 //1.0  //Bending energy
 
 //External field
@@ -55,7 +55,7 @@
 #ifndef FUNCTIONALITY  //this if block is in the event FUNCTIONALITY is specified in "temp_params.h"
 	#define FUNCTIONALITY 3
 #endif 
-#define REPEAT_PHANTOMS 5 //#Must be Odd! 0,1,3,5,7,9,...
+#define REPEAT_PHANTOMS 0 //#Must be Odd! 0,1,3,5,7,9,...
 #define PHANTOMS 35*REPEAT_PHANTOMS
 #define CHAINLENGTH 36 + PHANTOMS
 #define DECORR_TIME 3000//0//0//0//0 //number of moves to relax the energy
@@ -75,8 +75,8 @@
  #define MAXBRANCHES FUNCTIONALITY //This is low level.  Only change FUNCTIONALITY
 
 // Watch permuations of first 4 monomers.  EXPENSIVE
- #define PERMUTATIONS
-# define PERMCORE 0,1,2,3
+// #define PERMUTATIONS
+// #define PERMCORE 0,1,2,3
 
  //Just Run mode parameters
  #define FRAME_PREFIX "Dend5g"
