@@ -31,7 +31,7 @@
 #define LOG_STATE 10
 
  //Molecule parameters
- #define MOL_SPACING 1.0 ///0.4/1.02 //2.0/1.39388
+ #define MOL_SPACING 1.0/0.4/1.02 //2.0/1.39388
  #define MOL_SIGMA	 0.5//MOL_SPACING*0.95
  #define MOL_BETA	 4.0 //1.0  //Bending energy
 
@@ -55,10 +55,10 @@
 #ifndef FUNCTIONALITY  //this if block is in the event FUNCTIONALITY is specified in "temp_params.h"
 	#define FUNCTIONALITY 3
 #endif 
-#define REPEAT_PHANTOMS 0 //#Must be Odd! 0,1,3,5,7,9,...
+#define REPEAT_PHANTOMS 5 //#Must be Odd! 0,1,3,5,7,9,...
 #define PHANTOMS 35*REPEAT_PHANTOMS
 #define CHAINLENGTH 36 + PHANTOMS
-#define DECORR_TIME 300//0//0//0//0//0 //number of moves to relax the energy
+#define DECORR_TIME 3000//0//0//0//0 //number of moves to relax the energy
 #define EQUILIBRATION DECORR_TIME//*10*5
 #define SNAPSHOT DECORR_TIME/10
 //#define MONOMER_RADIUS 1.1//1.414213562

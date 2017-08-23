@@ -312,7 +312,7 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 		//zero density
 		for(int i = 0; i < DENSITY_BINS_2D*DENSITY_BINS_2D; i++){de2DArray[i] = 0;}
 		// Mean monomer locations
-		Eigen::Matrix3Xd mean_state = mol1->getCorePositions(permframe);
+		Eigen::Matrix3Xd mean_state = mol1->getMonomerPositions();
 
 		//Zero rg2 histogram
 		for(int i = 0; i < RG2_BINS; i++){rg2HistogramBins[i]=0;}
@@ -361,16 +361,15 @@ void JustRun(branchedChain *mol1, const int batches, const int frames, const int
 			mol1->findDensity(ll.density_sum, DENSITY_BINS,DENSITY_MAX_DOMAIN);  //overall density
 
 			//Rotate molecule to reference state with Kabsch
-			Eigen::Matrix3Xd new_state = mol1->getCorePositions(permframe);	// Get current monomer positions
+			Eigen::Matrix3Xd new_state = mol1->getMonomerPositions();	// Get current monomer positions
 			Eigen::Affine3d orient = Find3DAffineTransform(new_state, mean_state/(double)ll.N);	// Perform Kabsch, with scale = 1.0
 			if(calculatePerm(new_state, permframe) == lastPerm ) {
 				mol1->findDensity2D(orient.linear()*mol1->getMonomerPositions(), de2DArray, DENSITY_BINS_2D, DENSITY_MAX_DOMAIN);
+				mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
 				nperm1++;
 			} else {
 				nperm2++;
 			}
-			mean_state = mean_state + orient.linear()*new_state;	// Calculate mean monomer positions
-
 #ifdef PERMUTATIONS
 			// Calculate permutation
 			perm += (double)calculatePerm(new_state, permframe);
